@@ -16,6 +16,7 @@ from pyevolve import Selectors
 from pyevolve import Statistics
 from pyevolve import DBAdapters
 
+from django_haikus.models import BaseHaiku
 from haikus.evaluators import HAIKU_EVALUATORS
 
 class Command(BaseCommand):
@@ -26,19 +27,21 @@ class Command(BaseCommand):
         # This function is the evaluation function, we want
         # to give high score to more zero'ed chromosomes
         r = redis.Redis()
-
-        EVALUATORS = []
+        
         evaluator_set = getattr(settings, 'HAIKU_EVALUATORS', HAIKU_EVALUATORS)
         def eval_func(chromosome):
             closeness = []
-
+            EVALUATORS = []
+            
             i = 0
             for eval_cls in evaluator_set:
+                print chromosome
                 EVALUATORS.append((eval_cls, float(chromosome[i])/100))
+                i += 1
             try:
-                rated_comments = BaseHaiku.get_concrete_child().objects().rated()
+                rated_comments = BaseHaiku.get_concrete_child().objects.rated()
             except AttributeError:
-                raise CommandError("BaseHaiku child-classes' manager must implement rated/unrated (see django_haikus.models.HaikuManager)"
+                raise CommandError("BaseHaiku child-classes' manager must implement rated/unrated (see django_haikus.models.HaikuManager")
                                    
             result_queue = "haiku:results_" + ''.join([random.choice(string.ascii_uppercase) for i in range(5)])
             for c in rated_comments:
@@ -61,7 +64,7 @@ class Command(BaseCommand):
 
         pyevolve.logEnable()
 
-        genome = G1DList.G1DList(len(EVALUATORS))
+        genome = G1DList.G1DList(len(evaluator_set))
 
         # Sets the range max and min of the 1D List
         genome.setParams(rangemin=0, rangemax=100)
