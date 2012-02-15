@@ -15,7 +15,7 @@ setup(
     dependency_links = ['http://github.com/wieden-kennedy/haikus/tarball/master#egg=haikus'],
     install_requires=["haikus","nltk","django>=1.2.1","redis","elementtree"],
     packages=['django_haikus'],
-    package_data={'django_haikus':['templates/*','static/*']},
+    package_data={'django_haikus':['templates/django_haikus/*','static/*/*']},
     zip_safe=False,
     include_package_data=True,
     classifiers=[
