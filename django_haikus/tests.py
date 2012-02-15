@@ -2,8 +2,11 @@
 Tests for django_haikus app
 """
 from django.test import TestCase
-from django_haikus.models import HaikuRating, BaseHaiku, SimpleHaiku
+from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
+from django.conf import settings
+
+from django_haikus.models import HaikuRating, BaseHaiku, SimpleHaiku
 
 class HaikuRatingTest(TestCase):
     """
@@ -52,3 +55,25 @@ class BaseHaikuTest(TestCase):
         haiku.set_syllable_count()
         self.assertEqual(haiku.syllables, haiku.syllable_count())
         self.assertFalse(haiku.is_haiku)
+
+class HaikuRatingUITest(TestCase):
+    """
+    Tests for the user-facing Haiku rating UI
+    """
+    def setUp(self):
+        self.old_model = getattr(settings, "HAIKU_MODEL", None)
+        settings.HAIKU_MODEL = SimpleHaiku
+        self.comment = SimpleHaiku.objects.create(text="Dog in the floor at, one onto the home for it, jump into the pool")
+    
+    def test_rating(self):
+        assert HaikuRating.objects.all().count() is 0
+        rsp = self.client.post(reverse('trainer-login'), { 'name': 'nilesh' })
+        self.assertEquals(rsp.status_code, 302)
+
+        url = reverse('set-rating', args=[self.comment.pk, 30])
+        rsp = self.client.get(url)
+        self.assertEquals(rsp.status_code, 302)
+        assert HaikuRating.objects.all().count() is 1
+
+    def tearDowwn(self):
+        settings.HAIKU = self.old_model
