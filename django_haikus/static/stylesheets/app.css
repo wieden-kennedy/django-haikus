@@ -1,0 +1,19 @@
+#haikus { font-size: 24px; font-family: Georgia; line-height: 28px; }
+#haikus li { display: none; }
+#haikus li.showing { display: block; }
+
+#popular ul { height: 137px; }
+#popular li img { height: 137px; width: 100%; }
+#popular li a { display: block; position: relative;}
+#popular li a .info { background: black; opacity: 0.8; position: absolute; bottom: 0; height: 50px; width: 100%; }
+#popular li a .info p { position: absolute; color: white; padding: 5px 10px 10px 10px; font-size: 12px; }
+
+#add form input { display: inline; }
+#add form a { top: -2px; left: 10px; padding: 8px 20px 9px; }
+
+#trainer li.first { font-size: 36px; line-height: 40px; margin: 30px 0px 70px 0px; background: #eee; padding: 20px; overflow: hidden; width: 100%;}
+#trainer li { margin-bottom: 30px; }
+#trainer li a { margin-top: 5px; }
+
+#trainer #hud a { color: white; text-decoration: underline; }
+#trainer li strong { font-size: 14px; display: block; }

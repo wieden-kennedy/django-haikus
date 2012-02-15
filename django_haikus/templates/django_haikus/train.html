@@ -1,0 +1,29 @@
+{% extends "harvest/base.html" %}
+
+{% block content %}
+    <div id="trainer" class="row">
+        <div id="hud" class="alert-box success">
+            Logged in as {{ training_user }}, {{ haikus|length }} haikus in queue (<a href="{% url trainer-logout %}">logout</a>)
+        </div>
+        <ul>
+        {% for haiku in haikus %}
+            <li {% if forloop.first %}class="first"{% endif %}>
+                <strong>Quality: {{ haiku.quality }}</strong>
+                {% for line in haiku.haiku %}
+                {{ line|lower }}<br/>
+                {% endfor %}
+	        <a class="nice small radius blue button" href="{% url add-tag haiku.id 'funny' %}">Funny</a>
+                <a class="nice small radius blue button" href="{% url add-tag haiku.id 'not_funny' %}">Not Funny</a><br />
+                <a class="nice small radius black button" href="{% url set-rating haiku.id 10 %}">Awful</a>
+                <a class="nice small radius black button" href="{% url set-rating haiku.id 30 %}">Poor</a>
+                <a class="nice small radius black button" href="{% url set-rating haiku.id 50 %}">Average</a>
+                <a class="nice small radius black button" href="{% url set-rating haiku.id 70 %}">Good</a>
+                <a class="nice small radius black button" href="{% url set-rating haiku.id 90 %}">Great</a>
+                <a class="nice small radius black button" href="{% url set-rating haiku.id 100 %}">Perfect</a>
+            </li>
+        {% endfor %}
+        </ul>
+    </div>
+
+
+{% endblock %}
