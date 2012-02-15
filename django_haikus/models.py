@@ -89,6 +89,20 @@ class BaseHaiku(models.Model, HaikuText):
         self.set_quality()
         super(BaseHaiku, self).save(*args, **kwargs)
 
+    @classmethod
+    def get_concrete_child(cls):
+        subclasses = BaseHaiku.__subclasses__()
+        try:
+            subclasses.remove(SimpleHaiku)
+        except:
+            pass
+
+        if len(subclasses) > 0:
+            child = getattr(settings, "HAIKU_MODEL", subclasses[0])
+        else:
+            child = SimpleHaiku
+        return child
+            
     class Meta:
         abstract = True
 
