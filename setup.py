@@ -13,7 +13,7 @@ setup(
     url="https://github.com/wieden-kennedy/django_haikus",
     version="0.0.1",
     dependency_links = ['http://github.com/wieden-kennedy/haikus/tarball/master#egg=haikus'],
-    install_requires=["haikus","nltk","django>=1.2.1","redis"],
+    install_requires=["haikus","nltk","django>=1.2.1","redis","elementtree"],
     packages=['django_haikus'],
     zip_safe=False,
     include_package_data=True,
