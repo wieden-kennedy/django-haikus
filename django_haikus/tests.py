@@ -7,6 +7,8 @@ from django.contrib.auth.models import User
 from django.conf import settings
 
 from django_haikus.models import HaikuRating, BaseHaiku, SimpleHaiku
+from django_haikus.evaluators import SentimentEvaluator
+from tagging.models import Tag
 
 class HaikuRatingTest(TestCase):
     """
@@ -77,3 +79,31 @@ class HaikuRatingUITest(TestCase):
 
     def tearDowwn(self):
         settings.HAIKU = self.old_model
+
+class SentimentEvaluatorsTest(TestCase):
+    """
+    Test that sentiment evaluators classify haikus by the given tags and boost scores of matching
+    comments accordingly.
+    """
+    def setUp(self):
+        self.life_affirming_comment = SimpleHaiku.objects.create(text="live "*17)
+        self.morbid_comment = SimpleHaiku.objects.create(text="die "*17)
+        Tag.objects.add_tag(self.life_affirming_comment, "life")
+        Tag.objects.add_tag(self.morbid_comment, "death")
+        
+        self.sentiment_evaluator = SentimentEvaluator(pos_tagname="life", neg_tagname="death")
+
+    def test_sentiment_evaluator(self):
+        # life affirming comment is life affirming
+        self.assertEqual(self.sentiment_evaluator(self.life_affirming_comment), 100)
+        # morbid comment is morbid
+        self.assertEqual(self.sentiment_evaluator(self.morbid_comment), 0)       
+
+        #this comment contains "death" words
+        comment = SimpleHaiku.objects.create(text="An old silent die... A frog jumps into the die. Splash! Silence again.")
+        # 0 points!
+        self.assertEqual(self.sentiment_evaluator(comment), 0)
+
+        #this comment contains "life" words
+        comment = SimpleHaiku.objects.create(text="An old silent life... A frog jumps into the life. Splash! Silence again.")
+        self.assertEqual(self.sentiment_evaluator(comment), 100) 
