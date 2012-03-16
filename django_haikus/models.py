@@ -25,29 +25,29 @@ class HaikuManager(models.Manager):
 
     def all_from_text(self, text):
         """
+        Create HaikuModel objects for each haiku in the given text
         """
         haikus = []
         for haiku in text.get_haikus():
             haiku_model = self._model_from_haiku(haiku, text)
             haikus.append(haiku_model)
-        return haikus()
+        return haikus
 
     def one_from_text(self, text):
         """
+        Create a HaikuModel for the first occurence of a haiku in the text
         """
         haiku_model = self._model_from_haiku(text.get_haiku(), text)
         return haiku_model
 
     def _model_from_haiku(self, haiku, text):
         """
+        Method for construction a single HaikuModel instance
         """
         haiku_model = HaikuModel(text=text)
         haiku_model.lines = haiku.get_lines()
-        haiku_model.save()     
-        return haiku_model
-            
-            
-            
+        haiku_model.save()
+        return haiku_model                                    
         
 class HaikuRating(models.Model):
     """
@@ -89,6 +89,7 @@ class BaseHaikuText(models.Model, HaikuText):
             self.save()
         
     def save(self, *args, **kwargs):
+        self.set_syllable_count()
         super(BaseHaikuText, self).save(*args, **kwargs)
 
     def create_haiku_models(self):
@@ -144,7 +145,8 @@ class HaikuModel(models.Model, Haiku):
         evaluators = getattr(settings, "HAIKU_EVALUATORS", DEFAULT_HAIKU_EVALUATORS)
         quality = self.calculate_quality(evaluators)
         self.quality = quality
-        self.save()
+        if save:
+            self.save()
     
     def average_human_rating(self):
         ratings = self.ratings.all()
@@ -156,6 +158,7 @@ class HaikuModel(models.Model, Haiku):
     def save(self, *args, **kwargs):
         if self.text is not None and not isinstance(self.text, BaseHaikuText):
             raise TypeError("Text model must descend from BaseHaikuText")
+        self.set_quality()
         return super(HaikuModel, self).save(*args, **kwargs)
 
     class Meta:

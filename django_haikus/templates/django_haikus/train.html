@@ -9,7 +9,7 @@
         {% for haiku in haikus %}
             <li {% if forloop.first %}class="first"{% endif %}>
                 <strong>Quality: {{ haiku.quality }}</strong>
-                {% for line in haiku.haiku %}
+                {% for line in haiku.get_lines %}
                 {{ line|lower }}<br/>
                 {% endfor %}
 	        <a class="nice small radius blue button" href="{% url add-tag haiku.id 'funny' %}">Funny</a>

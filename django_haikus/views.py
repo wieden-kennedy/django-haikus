@@ -19,7 +19,6 @@ def logout(request):
     del request.session['training-user']
     return HttpResponseRedirect(reverse("trainer-login"))
 
-# Create your views here.
 def train(request, id=None, rating=None, tag=None):
     # If the user isn't logged in, bounce them.
     if request.session.get('training-user') is None:
