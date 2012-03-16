@@ -13,7 +13,7 @@ from django.conf import settings
 
 from tagging.models import Tag, TaggedItem
 from haikus.evaluators import HaikuEvaluator
-from django_haikus.models import BaseHaiku
+from django_haikus.models import HaikuModel
 
 class SentimentEvaluator(HaikuEvaluator):
     """
@@ -27,11 +27,11 @@ class SentimentEvaluator(HaikuEvaluator):
         self.pos_tag, created = Tag.objects.get_or_create(name=pos_tagname)
         self.neg_tag, created = Tag.objects.get_or_create(name=neg_tagname)
 
-        pos_comments = TaggedItem.objects.get_union_by_model(BaseHaiku.get_concrete_child(), self.pos_tag)
-        neg_comments = TaggedItem.objects.get_union_by_model(BaseHaiku.get_concrete_child(), self.neg_tag)
+        pos_comments = TaggedItem.objects.get_union_by_model(HaikuModel, self.pos_tag)
+        neg_comments = TaggedItem.objects.get_union_by_model(HaikuModel, self.neg_tag)
 
-        pos_feats = [(self.word_feats(pos.filtered_text().split()), pos_tagname) for pos in pos_comments]
-        neg_feats = [(self.word_feats(neg.filtered_text().split()), neg_tagname) for neg in neg_comments]
+        pos_feats = [(self.word_feats(pos.flattened_lines().split()), pos_tagname) for pos in pos_comments]
+        neg_feats = [(self.word_feats(neg.flattened_lines().split()), neg_tagname) for neg in neg_comments]
 
         try:
             self.classifier = NaiveBayesClassifier.train(pos_feats + neg_feats)
@@ -40,14 +40,15 @@ class SentimentEvaluator(HaikuEvaluator):
             self.classifier = None
         super(SentimentEvaluator, self).__init__(weight=weight)
         
-    def evaluate(self, comment):
+    def evaluate(self, haiku):
         """
         Classify the given comment and boost its score if it matches our positive
         tag
         """
+        print haiku.get_lines()
         score = 0
         if self.classifier is not None:
-            tag = self.classifier.classify(self.word_feats(comment.filtered_text().split()))
+            tag = self.classifier.classify(self.word_feats(haiku.flattened_lines().split()))
             if tag == self.pos_tag.name:
                 score = 100
         return score
@@ -73,9 +74,9 @@ class BigramSplitEvaluator(HaikuEvaluator):
     @todo: attempt to adjust score with respect to the score for the bigram
     being split (since most any combination of two words is techincally a bigram)
     """
-    def evaluate(self, comment):
+    def evaluate(self, haiku):
         score = 100
-        bigrams = comment.line_end_bigrams()
+        bigrams = haiku.line_end_bigrams()
         r = redis.Redis()
         for bigram in bigrams:
             try:

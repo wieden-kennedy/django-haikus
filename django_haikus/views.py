@@ -3,7 +3,7 @@ from django.template import RequestContext as RC
 from django.shortcuts import render_to_response, get_object_or_404
 from django.core.urlresolvers import reverse
 
-from django_haikus.models import HaikuRating, BaseHaiku
+from django_haikus.models import HaikuRating, HaikuModel
 from tagging.models import Tag
 
 def login(request):
@@ -27,7 +27,7 @@ def train(request, id=None, rating=None, tag=None):
 
     # If the user is giving us a numerical rating, store it in HaikuRating
     if id and rating:
-        haiku = BaseHaiku.get_concrete_child().objects.get(pk=id)
+        haiku = HaikuModel.objects.get(pk=id)
         HaikuRating.objects.create(haiku=haiku, rating=rating, user=request.session['training-user'])
         haiku.save()
         return HttpResponseRedirect(reverse('train'))
@@ -38,6 +38,6 @@ def train(request, id=None, rating=None, tag=None):
         # note: removes other tags. fine as long as we're using one pair of tags.
         Tag.objects.update_tags(haiku, tag)
     
-    haikus = BaseHaiku.get_concrete_child().objects.unrated().order_by("-quality")
+    haikus = HaikuModel.objects.unrated().order_by("-quality")
     training_user = request.session.get('training-user')
     return render_to_response("django_haikus/train.html", { 'haikus': haikus, 'training_user': training_user }, context_instance=RC(request))

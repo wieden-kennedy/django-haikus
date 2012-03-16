@@ -6,7 +6,7 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.conf import settings
 
-from django_haikus.models import HaikuRating, BaseHaiku, SimpleHaiku
+from django_haikus.models import HaikuRating, HaikuModel, SimpleText
 from django_haikus.evaluators import SentimentEvaluator
 from tagging.models import Tag
 
@@ -15,7 +15,7 @@ class HaikuRatingTest(TestCase):
     Test the HaikuRating model
     """
     def test_rate_non_haiku(self):
-        self.haiku = SimpleHaiku.objects.create(text="Some text")
+        self.haiku = HaikuModel.objects.create(lines=["Some text",])
         rating = HaikuRating(haiku=self.haiku, rating=50, user="grant")
         rating.save()
         self.assertEqual(HaikuRating.objects.count(), 1)
@@ -26,59 +26,63 @@ class HaikuRatingTest(TestCase):
         self.assertRaises(TypeError, rating.save)
         self.assertEqual(HaikuRating.objects.count(), 1)
 
+    def test_lines(self):
+        self.haiku = HaikuModel.objects.create(lines=["some text"])
+
 class HaikuManagerTest(TestCase):
     """
     Test that the HaikuManager gets the correct haikus via
     is rated/unrated methods
     """
     def setUp(self):
-        self.rated = SimpleHaiku.objects.create(text="An old silent pond... A frog jumps into the pond. Splash! Silence again.")
+        self.text = SimpleText.objects.create(text="An old silent pond... A frog jumps into the pond. Splash! Silence again.")
+        self.text2 = SimpleText.objects.create(text="An old silent pond... A frog jumps into the pond. Splash! Silence once more.")
+        self.rated = HaikuModel.objects.one_from_text(self.text)
+        rated = HaikuModel.objects.get(pk=self.rated.pk)
         rating = HaikuRating.objects.create(haiku=self.rated, rating=10, user="grant")
-        self.unrated = SimpleHaiku.objects.create(text="An old silent pond... A frog jumps into the pond. Splash! Silence sometime.")
+        self.unrated = HaikuModel.objects.one_from_text(self.text2)
+        self.unrated.save()
 
     def test_rated(self):
-        rated_haikus = SimpleHaiku.objects.rated()
+        rated_haikus = HaikuModel.objects.rated()
         self.assertTrue(self.rated in rated_haikus)
         self.assertFalse(self.unrated in rated_haikus)
 
     def test_unrated(self):
-        unrated_haikus = SimpleHaiku.objects.unrated()
+        unrated_haikus = HaikuModel.objects.unrated()
         self.assertTrue(self.unrated in unrated_haikus)
         self.assertFalse(self.rated in unrated_haikus)
         
-class BaseHaikuTest(TestCase):
+class BaseHaikuTextTest(TestCase):
     """
     Simple tests for the BaseHaiku model
     """
     def test_set_syllable_count(self):
-        haiku = SimpleHaiku(text="here's some words")
-
-        self.assertEqual(haiku.syllables, 0)
-        haiku.set_syllable_count()
-        self.assertEqual(haiku.syllables, haiku.syllable_count())
-        self.assertFalse(haiku.is_haiku)
+        text = SimpleText(text="here's some words")
+        self.assertEqual(text.syllables, 0)
+        text.set_syllable_count()
+        self.assertEqual(text.syllables, text.syllable_count())
+        self.assertFalse(text.is_haiku)
 
 class HaikuRatingUITest(TestCase):
     """
     Tests for the user-facing Haiku rating UI
     """
     def setUp(self):
-        self.old_model = getattr(settings, "HAIKU_MODEL", None)
-        settings.HAIKU_MODEL = SimpleHaiku
-        self.comment = SimpleHaiku.objects.create(text="Dog in the floor at, one onto the home for it, jump into the pool")
-    
+        self.comment = SimpleText.objects.create(text="Dog in the floor at, one onto the home for it, jump into the pool")
+        self.haiku = HaikuModel.objects.one_from_text(self.comment)
+        self.haiku.save()
+        
     def test_rating(self):
         assert HaikuRating.objects.all().count() is 0
         rsp = self.client.post(reverse('trainer-login'), { 'name': 'nilesh' })
         self.assertEquals(rsp.status_code, 302)
 
-        url = reverse('set-rating', args=[self.comment.pk, 30])
+        url = reverse('set-rating', args=[self.haiku.pk, 30])
         rsp = self.client.get(url)
         self.assertEquals(rsp.status_code, 302)
         assert HaikuRating.objects.all().count() is 1
 
-    def tearDowwn(self):
-        settings.HAIKU = self.old_model
 
 class SentimentEvaluatorsTest(TestCase):
     """
@@ -86,24 +90,28 @@ class SentimentEvaluatorsTest(TestCase):
     comments accordingly.
     """
     def setUp(self):
-        self.life_affirming_comment = SimpleHaiku.objects.create(text="live "*17)
-        self.morbid_comment = SimpleHaiku.objects.create(text="die "*17)
-        Tag.objects.add_tag(self.life_affirming_comment, "life")
-        Tag.objects.add_tag(self.morbid_comment, "death")
+        self.life_affirming_comment = SimpleText.objects.create(text="live "*17)
+        self.morbid_comment = SimpleText.objects.create(text="die "*17)
+        self.life_haiku = HaikuModel.objects.one_from_text(self.life_affirming_comment)
+        self.death_haiku = HaikuModel.objects.one_from_text(self.morbid_comment)
+
+        Tag.objects.add_tag(self.life_haiku, "life")
+        Tag.objects.add_tag(self.death_haiku, "death")
         
         self.sentiment_evaluator = SentimentEvaluator(pos_tagname="life", neg_tagname="death")
 
     def test_sentiment_evaluator(self):
         # life affirming comment is life affirming
-        self.assertEqual(self.sentiment_evaluator(self.life_affirming_comment), 100)
+        self.assertEqual(self.sentiment_evaluator(self.life_haiku), 100)
         # morbid comment is morbid
-        self.assertEqual(self.sentiment_evaluator(self.morbid_comment), 0)       
+        self.assertEqual(self.sentiment_evaluator(self.death_haiku), 0)       
 
         #this comment contains "death" words
-        comment = SimpleHaiku.objects.create(text="An old silent die... A frog jumps into the die. Splash! Silence again.")
+        comment = SimpleText.objects.create(text="An old silent die... A frog jumps into the die. Splash! Silence again.")    
+
         # 0 points!
-        self.assertEqual(self.sentiment_evaluator(comment), 0)
+        self.assertEqual(self.sentiment_evaluator(HaikuModel.objects.one_from_text(comment)), 0)
 
         #this comment contains "life" words
-        comment = SimpleHaiku.objects.create(text="An old silent life... A frog jumps into the life. Splash! Silence again.")
-        self.assertEqual(self.sentiment_evaluator(comment), 100) 
+        comment = SimpleText.objects.create(text="An old silent life... A frog jumps into the life. Splash! Silence again.")
+        self.assertEqual(self.sentiment_evaluator(HaikuModel.objects.one_from_text(comment)), 100)

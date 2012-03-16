@@ -1,12 +1,15 @@
 """
 Models for django_haikus
 """
+import pickle
 from django.db import models
 from django.db.models import Count
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
-from haikus import HaikuText
+from picklefield.fields import PickledObjectField
+
+from haikus import HaikuText, Haiku
 from haikus.evaluators import DEFAULT_HAIKU_EVALUATORS
 
 
@@ -15,10 +18,38 @@ class HaikuManager(models.Manager):
     Manager with method for getting rated/un-rated comments
     """
     def rated(self):
-        return self.get_query_set().annotate(ratings_count=Count('ratings')).filter(is_haiku=True).exclude(ratings_count=0)
+        return self.get_query_set().annotate(ratings_count=Count('ratings')).exclude(ratings_count=0)
 
     def unrated(self):
-        return self.get_query_set().annotate(ratings_count=Count('ratings')).filter(is_haiku=True, ratings_count=0)
+        return self.get_query_set().annotate(ratings_count=Count('ratings')).filter(ratings_count=0)
+
+    def all_from_text(self, text):
+        """
+        """
+        haikus = []
+        for haiku in text.get_haikus():
+            haiku_model = self._model_from_haiku(haiku, text)
+            haikus.append(haiku_model)
+        return haikus()
+
+    def one_from_text(self, text):
+        """
+        """
+        haiku_model = self._model_from_haiku(text.get_haiku(), text)
+        return haiku_model
+
+    def _model_from_haiku(self, haiku, text):
+        """
+        """
+        haiku_model = HaikuModel(text=text)
+        
+        haiku_model.lines = haiku.get_lines()
+        print "set lines"
+        haiku_model.save()     
+        return haiku_model
+            
+            
+            
         
 class HaikuRating(models.Model):
     """
@@ -32,23 +63,17 @@ class HaikuRating(models.Model):
     user = models.CharField(max_length=255)
 
     def save(self, *args, **kwargs):
-        if not isinstance(self.haiku, BaseHaiku):
-            raise TypeError("Rated model must descend from HaikuBase")
+        if not isinstance(self.haiku, HaikuModel):
+            raise TypeError("Rated model must descend from HaikuModel")
         super(HaikuRating, self).save(*args, **kwargs)
         
-class BaseHaiku(models.Model, HaikuText):
+class BaseHaikuText(models.Model, HaikuText):
     """
     Abstract base model for haiku text sources
     """
     text = models.TextField(unique=True)
     syllables = models.IntegerField(default=0)
-    quality = models.IntegerField(default=0)
-    is_haiku = models.BooleanField(default=False)                                
-    ratings = generic.GenericRelation(HaikuRating,
-                                content_type_field='content_type',
-                                object_id_field='object_id')
-
-    objects = HaikuManager()
+    is_haiku = models.BooleanField(default=False)
     
     def __unicode__(self):
         return self.text
@@ -61,21 +86,67 @@ class BaseHaiku(models.Model, HaikuText):
 
     def set_syllable_count(self, save=False):
         self.syllables = self.syllable_count()
-        self.is_haiku = bool(self.haiku())
+        self.is_haiku = bool(self.get_haiku())
         if save:
             self.save()
+        
+    def save(self, *args, **kwargs):
+        super(BaseHaikuText, self).save(*args, **kwargs)
+
+    def create_haiku_models(self):
+        """
+        Create HaikuModels from this text's haikus
+        """
+        for haiku in self.get_haikus():
+            model = HaikuModel.from_haiku(haiku, text=self)
+
+    @classmethod
+    def get_concrete_child(cls):
+        subclasses = BaseHaikuText.__subclasses__()
+        try:
+            subclasses.remove(SimpleHaiku)
+        except:
+            pass
+
+        if len(subclasses) > 0:
+            child = getattr(settings, "TEXT_MODEL", subclasses[0])
+        else:
+            child = SimpleHaiku
+        return child
+            
+    class Meta:
+        abstract = True
+
+
+class HaikuModel(models.Model, Haiku):
+    """
+    A model wrapper for the Haiku object
+    """
+    lines = PickledObjectField()
+    content_type = models.ForeignKey(ContentType, null=True, blank=True, related_name="haikus")
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    text = generic.GenericForeignKey('content_type','object_id')
+    quality = models.IntegerField(default=0)
+    ratings = generic.GenericRelation(HaikuRating,
+                                content_type_field='content_type',
+                                object_id_field='object_id')
+    objects = HaikuManager()
+
+    def get_lines(self):
+        return self.lines
+
+    def set_lines(self, lines):
+        self.lines = lines
 
     def set_quality(self, save=False):
         """
-        Set the Comment's quality field
+        Set the Haiku's quality field
         """
         quality = 0
-        if self.is_haiku:
-            evaluators = getattr(settings, "HAIKU_EVALUATORS", DEFAULT_HAIKU_EVALUATORS)
-            quality = self.calculate_quality(evaluators)
+        evaluators = getattr(settings, "HAIKU_EVALUATORS", DEFAULT_HAIKU_EVALUATORS)
+        quality = self.calculate_quality(evaluators)
         self.quality = quality
-        if save:
-            self.save()
+        self.save()
     
     def average_human_rating(self):
         ratings = self.ratings.all()
@@ -85,30 +156,17 @@ class BaseHaiku(models.Model, HaikuText):
             return None
 
     def save(self, *args, **kwargs):
-        self.set_syllable_count()
-        self.set_quality()
-        super(BaseHaiku, self).save(*args, **kwargs)
+        if self.text is not None and not isinstance(self.text, BaseHaikuText):
+            raise TypeError("Text model must descend from BaseHaikuText")
+        print "at save time! "+str(self.lines)
+        return super(HaikuModel, self).save(*args, **kwargs)
 
-    @classmethod
-    def get_concrete_child(cls):
-        subclasses = BaseHaiku.__subclasses__()
-        try:
-            subclasses.remove(SimpleHaiku)
-        except:
-            pass
-
-        if len(subclasses) > 0:
-            child = getattr(settings, "HAIKU_MODEL", subclasses[0])
-        else:
-            child = SimpleHaiku
-        return child
-            
     class Meta:
-        abstract = True
-
-
-class SimpleHaiku(BaseHaiku):
+        unique_together = ('lines','object_id')
+        
+class SimpleText(BaseHaikuText):
     """
-    A very simple descendant of BaseHaiku
+    A simple descendant of BaseText
     """
     pass
+
