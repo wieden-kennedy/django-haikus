@@ -42,9 +42,7 @@ class HaikuManager(models.Manager):
         """
         """
         haiku_model = HaikuModel(text=text)
-        
         haiku_model.lines = haiku.get_lines()
-        print "set lines"
         haiku_model.save()     
         return haiku_model
             
@@ -158,7 +156,6 @@ class HaikuModel(models.Model, Haiku):
     def save(self, *args, **kwargs):
         if self.text is not None and not isinstance(self.text, BaseHaikuText):
             raise TypeError("Text model must descend from BaseHaikuText")
-        print "at save time! "+str(self.lines)
         return super(HaikuModel, self).save(*args, **kwargs)
 
     class Meta:

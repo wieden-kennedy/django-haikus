@@ -45,7 +45,6 @@ class SentimentEvaluator(HaikuEvaluator):
         Classify the given comment and boost its score if it matches our positive
         tag
         """
-        print haiku.get_lines()
         score = 0
         if self.classifier is not None:
             tag = self.classifier.classify(self.word_feats(haiku.flattened_lines().split()))
