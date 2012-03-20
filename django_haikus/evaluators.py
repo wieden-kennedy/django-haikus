@@ -85,6 +85,5 @@ class BigramSplitEvaluator(HaikuEvaluator):
         for bigram in haiku.line_end_bigrams():
             key = "%s,%s" % (bigram[0], bigram[1])
             score -= histogram.get(key) * line_weights[line]
-            print "new score: %s" % score
             line += 1
         return score
