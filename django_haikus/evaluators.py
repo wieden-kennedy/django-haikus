@@ -14,6 +14,7 @@ from django.conf import settings
 from tagging.models import Tag, TaggedItem
 from haikus.evaluators import HaikuEvaluator
 from django_haikus.models import HaikuModel
+from django_haikus.bigrams import BigramHistogram
 
 class SentimentEvaluator(HaikuEvaluator):
     """
@@ -75,13 +76,15 @@ class BigramSplitEvaluator(HaikuEvaluator):
     """
     def evaluate(self, haiku):
         score = 100
-        bigrams = haiku.line_end_bigrams()
-        r = redis.Redis()
-        for bigram in bigrams:
-            try:
-                bigram_score = r.hget(settings.BIGRAM_HASH_KEY, str(bigram))
-                if (bigram_score > 0):
-                    score -= 50
-            except KeyError:
-                pass
+        histogram = BigramHistogram()
+        line = 1
+        line_weights = {
+            1: 0.3,
+            2: 0.7
+        }
+        for bigram in haiku.line_end_bigrams():
+            key = "%s,%s" % (bigram[0], bigram[1])
+            score -= histogram.get(key) * line_weights[line]
+            print "new score: %s" % score
+            line += 1
         return score

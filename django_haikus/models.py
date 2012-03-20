@@ -103,7 +103,7 @@ class BaseHaikuText(models.Model, HaikuText):
     def get_concrete_child(cls):
         subclasses = BaseHaikuText.__subclasses__()
         try:
-            subclasses.remove(SimpleHaiku)
+            subclasses.remove(SimpleText)
         except:
             pass
 

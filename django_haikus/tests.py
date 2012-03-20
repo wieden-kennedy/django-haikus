@@ -8,6 +8,7 @@ from django.conf import settings
 
 from django_haikus.models import HaikuRating, HaikuModel, SimpleText
 from django_haikus.evaluators import SentimentEvaluator
+from django_haikus.bigrams import BigramHistogram
 from tagging.models import Tag
 
 class HaikuRatingTest(TestCase):
@@ -115,3 +116,69 @@ class SentimentEvaluatorsTest(TestCase):
         #this comment contains "life" words
         comment = SimpleText.objects.create(text="An old silent life... A frog jumps into the life. Splash! Silence again.")
         self.assertEqual(self.sentiment_evaluator(HaikuModel.objects.one_from_text(comment)), 100)
+
+class BigramHistogramConstructionTest(TestCase):
+    """
+    Test that (A) the bigram histogram is constructed correctly 
+    """
+    def setUp(self):
+        self.comments = []
+        self.comments.append(SimpleText.objects.create(text="A can of cherry coke makes the thing awesome"))
+        self.comments.append(SimpleText.objects.create(text="Watch for the sunrise, and in a split second and there goes the boat across the horizon"))
+        self.comments.append(SimpleText.objects.create(text="a true soul surfer, there goes an absolute legend in a second"))
+
+    def test_histogram_values(self):
+        test_histogram = {
+            'A,can': 1,
+            'can,of': 1,
+            'of,cherry': 1,
+            'cherry,coke': 1,
+            'coke,makes': 1,
+            'makes,the': 1,
+            'the,thing': 1,
+            'thing,awesome': 1,
+            'watch,for': 1,
+            'for,the': 1,
+            'the,sunrise': 1,
+            'sunrise,and': 1,
+            'and,in': 1,
+            'in,a': 2,
+            'a,split': 1,
+            'split,second': 1,
+            'second,and': 1,
+            'and,there': 1,
+            'there,goes': 2,
+            'goes,the': 1,
+            'the,boat': 1,
+            'boat,across': 1,
+            'across,the': 1,
+            'the,horizon': 1,
+            'a,true': 1,
+            'true,soul': 1,
+            'soul,surfer': 1,
+            'surfer,there': 1,
+            'goes,an': 1,
+            'an,absolute': 1,
+            'absolute,legend': 1,
+            'legend,in': 1,
+            'a,second': 1,
+        }
+
+        self.assertEquals(len(test_histogram.keys()), 33)
+
+        self.histogram = BigramHistogram()
+        self.histogram.load()
+
+        self.assertEqual(self.histogram.key, "simpletext")
+        self.assertEqual(self.histogram.count(), 33 + 2) # plus 2 for __max, on for __max_bigram
+        self.assertEqual(self.histogram.max(), 2)
+
+        self.assertEqual(self.histogram.max_bigram(), "there,goes")
+        self.assertEqual(self.histogram.get('there,goes'), 100.0)
+        self.assertEqual(self.histogram.get('a,true'), 50.0)
+        self.assertEqual(self.histogram.get('nilesh,ashra'), False)
+
+    def tearDown(self):
+        self.histogram.flush()
+
+
