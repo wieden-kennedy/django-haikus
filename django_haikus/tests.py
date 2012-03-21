@@ -122,6 +122,7 @@ class BigramHistogramConstructionTest(TestCase):
     Test that (A) the bigram histogram is constructed correctly 
     """
     def setUp(self):
+        settings.TEXT_MODEL = SimpleText
         self.comments = []
         self.comments.append(SimpleText.objects.create(text="A can of cherry coke makes the thing awesome"))
         self.comments.append(SimpleText.objects.create(text="Watch for the sunrise, and in a split second and there goes the boat across the horizon"))
