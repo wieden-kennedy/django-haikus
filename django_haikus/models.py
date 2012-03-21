@@ -28,7 +28,7 @@ class HaikuManager(models.Manager):
         Create HaikuModel objects for each haiku in the given text
         """
         haikus = []
-        for haiku in text.get_haikus():
+        for haiku in text.get_haikus():       
             haiku_model = self._model_from_haiku(haiku, text)
             haikus.append(haiku_model)
         return haikus
@@ -44,9 +44,7 @@ class HaikuManager(models.Manager):
         """
         Method for construction a single HaikuModel instance
         """
-        haiku_model = HaikuModel(text=text)
-        haiku_model.lines = haiku.get_lines()
-        haiku_model.save()
+        haiku_model = HaikuModel.objects.create(text=text, lines=haiku.get_lines())
         return haiku_model                                    
         
 class HaikuRating(models.Model):
@@ -140,7 +138,7 @@ class HaikuModel(models.Model, Haiku):
     def set_lines(self, lines):
         self.lines = lines
 
-    def set_quality(self, save=False):
+    def set_quality(self):
         """
         Set the Haiku's quality field
         """
@@ -148,8 +146,6 @@ class HaikuModel(models.Model, Haiku):
         evaluators = getattr(settings, "HAIKU_EVALUATORS", DEFAULT_HAIKU_EVALUATORS)
         quality = self.calculate_quality(evaluators)
         self.quality = quality
-        if save:
-            self.save()
     
     def average_human_rating(self):
         ratings = self.ratings.all()

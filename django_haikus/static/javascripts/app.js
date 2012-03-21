@@ -104,16 +104,21 @@ $(document).ready(function () {
 		return false;
 	});
 
-	$('#haikus').cycle({ 
-	    fx:     'fade', 
-	    speed:  'fast', 
-	    timeout: 0, 
-	    next:   '#next-haiku', 
-	    prev:   '#prev-haiku' 
-	});
+        initializeCycle();
 
 	$("#add form a").click(function(){
 		$(this).parent().submit();
 	});
 
 });
+
+
+function initializeCycle() {
+    $('#haikus').cycle({ 
+	fx:     'fade', 
+	speed:  'fast', 
+	timeout: 0, 
+	next:   '#next-haiku', 
+	prev:   '#prev-haiku' 
+    });
+}
