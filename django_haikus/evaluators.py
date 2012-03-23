@@ -16,6 +16,8 @@ from haikus.evaluators import HaikuEvaluator
 from django_haikus.models import HaikuModel
 from django_haikus.bigrams import BigramHistogram
 
+from markov.markov import Markov
+
 class SentimentEvaluator(HaikuEvaluator):
     """
     Evaluate a comment by some sentiment (i.e. humorous, not humorous)
@@ -87,3 +89,21 @@ class BigramSplitEvaluator(HaikuEvaluator):
             score -= histogram.get(key) * line_weights[line]
             line += 1
         return score
+
+class MarkovLineEvaluator(HaikuEvaluator):
+    """
+    Score each line of the haiku according to how well it fits our
+    markov model for 'good' lines
+    """
+    def __init__(self, weight=1, prefix=None):
+        self.prefix = prefix or getattr(settings, "MARKOV_DATA_PREFIX", "goodlines")
+        self.markov_data = Markov(prefix=prefix)
+        super(MarkovLineEvaluator, self).__init__(weight=weight)
+        
+    def evaluate(self, haiku):
+        score = 0
+        for line in haiku.get_lines():
+            score += self.markov_data.score_for_line(line.split())
+            print score
+        return score/len(haiku.get_lines())
+            

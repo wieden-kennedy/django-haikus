@@ -7,7 +7,7 @@ from django.contrib.auth.models import User
 from django.conf import settings
 
 from django_haikus.models import HaikuRating, HaikuModel, SimpleText
-from django_haikus.evaluators import SentimentEvaluator
+from django_haikus.evaluators import SentimentEvaluator, MarkovLineEvaluator
 from django_haikus.bigrams import BigramHistogram
 from tagging.models import Tag
 
@@ -116,6 +116,44 @@ class SentimentEvaluatorsTest(TestCase):
         #this comment contains "life" words
         comment = SimpleText.objects.create(text="An old silent life... A frog jumps into the life. Splash! Silence again.")
         self.assertEqual(self.sentiment_evaluator(HaikuModel.objects.one_from_text(comment)), 100)
+
+class MarkovEvaluatorsTest(TestCase):
+    """
+    Test the markov evaluator scores haikus according to their fit with a model for 'good' haiku line
+    """
+    def setUp(self):
+        settings.REDIS.update({'db': 1})
+        self.markov_evaluator = MarkovLineEvaluator(prefix="testevaluators")
+        self.good_lines = [
+            ["jumped", "into", "the", "pool"],
+            ["i", "jumped", "into", "it"],
+            ["i", "jumped", "into", "mud"],
+            ["it", "made", "a", "big", "sloppy","mess"],
+            ["why", "did", "i", "do", "that"],
+            ["why", "did", "we", "do", "that"]
+            ]
+
+        data = self.markov_evaluator.markov_data
+        for line in self.good_lines:
+            data.add_line_to_index(line)
+
+    def test_markov_evaluator(self):
+        # this haiku matches our model perfectly
+        comment = SimpleText.objects.create(text="i jumped into it, it made a big sloppy mess, why did i do that?")
+        haiku = HaikuModel.objects.all_from_text(comment)[0]
+        self.assertEqual(self.markov_evaluator(haiku), 100)
+
+        #two lines in this haiku are "perfect"
+        comment = SimpleText.objects.create(text="i jumped into it, it made a big sloppy mess, why did i do it?")
+        haiku = HaikuModel.objects.all_from_text(comment)[0]
+        self.assertEqual(self.markov_evaluator(haiku), 250.0/3)
+        
+    def tearDown(self):
+        client = self.markov_evaluator.markov_data.client
+        keys = client.keys("testevaluators*")
+        for key in keys:
+            client.delete(key)
+    
 
 class BigramHistogramConstructionTest(TestCase):
     """
