@@ -106,4 +106,3 @@ class MarkovLineEvaluator(HaikuEvaluator):
             score += self.markov_data.score_for_line(line.split())
             print score
         return score/len(haiku.get_lines())
-            
