@@ -128,8 +128,7 @@ class HaikuModel(models.Model, Haiku):
                                 content_type_field='content_type',
                                 object_id_field='object_id')
     up_votes = models.PositiveIntegerField(default=0)
-    down_votes = models.PositiveIntegerField(default=0)
-    
+    down_votes = models.PositiveIntegerField(default=0) 
     objects = HaikuManager()
 
     def get_lines(self):
