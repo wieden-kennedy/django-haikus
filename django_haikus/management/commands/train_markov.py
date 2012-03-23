@@ -15,7 +15,12 @@ class Command(BaseCommand):
         """
         Seed our markov model with phrases from the nps_chat corpus
         """
-        client = redis.Redis()
+        redis_conf = getattr(settings, 'REDIS', False)
+        if redis_conf:
+            client = redis.Redis(**redis_conf)
+        else:
+            client = redis.Redis()
+
         if client.exists("train_nps"):
             print "Already trained on nps data!"
         else:
