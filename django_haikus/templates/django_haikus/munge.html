@@ -1,0 +1,23 @@
+{% extends "harvest/base.html" %}
+
+{% block content %}
+    <div class="row">
+        <div class="three columns">
+            <form action="{% url munge %}" method="POST">
+                {% csrf_token %}
+                {{ form.as_p }}
+                <input type="submit" value="Go"/>
+            </form>
+        </div>
+        <div class="six columns" style="font-size: 32px; font-weight: 200; line-height: 40px">
+            {% for h in haikus %}
+                {% for line in h %}
+                    {{ line }}<br/>
+                {% endfor %}
+                <br/>
+                <br/>
+                <br/>
+            {% endfor %}
+        </div>
+    </div>
+{% endblock %}

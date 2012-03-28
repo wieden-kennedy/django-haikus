@@ -4,6 +4,7 @@ from django.shortcuts import render_to_response, get_object_or_404
 from django.core.urlresolvers import reverse
 
 from django_haikus.models import HaikuRating, HaikuModel
+from django_haikus.composer import compose_haikus, ComposerForm
 from tagging.models import Tag
 
 def login(request):
@@ -40,3 +41,14 @@ def train(request, id=None, rating=None, tag=None):
     haikus = HaikuModel.objects.unrated().order_by("-quality")
     training_user = request.session.get('training-user')
     return render_to_response("django_haikus/train.html", { 'haikus': haikus, 'training_user': training_user }, context_instance=RC(request))
+
+def munge(request):
+    haikus = []
+    if request.POST:
+        f = ComposerForm(request.POST)
+        if f.is_valid():
+            haikus = compose_haikus(**f.cleaned_data)
+    else:
+        f = ComposerForm(initial=dict(pattern="1,1,2", count=5, quality_threshold=99, debug='0'))
+    
+    return render_to_response("django_haikus/munge.html", { 'haikus': haikus, 'form': f }, context_instance=RC(request))

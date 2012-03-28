@@ -6,4 +6,6 @@ urlpatterns = patterns('',
     url(r'^/(?P<id>\d+)/(?P<rating>\d+)/', 'django_haikus.views.train', name="set-rating"),
     url(r'^/(?P<id>\d+)/(?P<tag>\w+)/', 'django_haikus.views.train', name="add-tag"),
     url(r'^$', 'django_haikus.views.train', name="train"),
+
+    url(r'^munge/$', 'django_haikus.views.munge', name="munge"),
 )
