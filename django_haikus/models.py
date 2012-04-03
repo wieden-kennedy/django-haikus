@@ -7,6 +7,8 @@ from django.db.models import Count
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
+from django.db.models.signals import post_save
+from django.dispatch import receiver
 from picklefield.fields import PickledObjectField
 
 from haikus import HaikuText, Haiku
@@ -44,7 +46,12 @@ class HaikuManager(models.Manager):
         """
         Method for construction a single HaikuModel instance
         """
-        haiku_model = HaikuModel.objects.create(text=text, lines=haiku.get_lines())
+        haiku_model = HaikuModel.objects.create(text=text)
+        i = 0
+        for line in haiku.get_lines():
+            haiku_line = HaikuLine.objects.create(text=line, line_number=i, source=haiku_model)
+            haiku_model.lines.add(haiku_line)
+            i += 1
         return haiku_model                                    
         
 class HaikuRating(models.Model):
@@ -114,12 +121,29 @@ class BaseHaikuText(models.Model, HaikuText):
     class Meta:
         abstract = True
 
+class HaikuLine(models.Model):
+    """
+    A model wrapper for an individual line in a haiku
+    """
+    line_number = models.IntegerField()
+    text = models.TextField()   
+    quality = models.IntegerField(default=0)
+    source = generic.GenericForeignKey('content_type', 'object_id')
+    object_id = models.PositiveIntegerField()
+    content_type = models.ForeignKey(ContentType)
 
+    @property
+    def source_text(self):
+        if hasattr(self.source, 'text'):
+            return self.source_haiku.text
+        else:
+            return None
+    
 class HaikuModel(models.Model, Haiku):
     """
     A model wrapper for the Haiku object
     """
-    lines = PickledObjectField()
+    lines = models.ManyToManyField(HaikuLine)
     content_type = models.ForeignKey(ContentType, null=True, blank=True, related_name="haikus")
     object_id = models.PositiveIntegerField(null=True, blank=True)
     text = generic.GenericForeignKey('content_type','object_id')
@@ -128,15 +152,13 @@ class HaikuModel(models.Model, Haiku):
                                 content_type_field='content_type',
                                 object_id_field='object_id')
     up_votes = models.PositiveIntegerField(default=0)
-    down_votes = models.PositiveIntegerField(default=0) 
+    down_votes = models.PositiveIntegerField(default=0)
+    is_composite = models.BooleanField(default=False)
     objects = HaikuManager()
 
     def get_lines(self):
-        return self.lines
-
-    def set_lines(self, lines):
-        self.lines = lines
-
+        return [line.text for line in self.lines.all()]
+    
     def set_quality(self):
         """
         Set the Haiku's quality field
@@ -156,15 +178,12 @@ class HaikuModel(models.Model, Haiku):
     def save(self, *args, **kwargs):
         if self.text is not None and not isinstance(self.text, BaseHaikuText):
             raise TypeError("Text model must descend from BaseHaikuText")
-        self.set_quality()
         return super(HaikuModel, self).save(*args, **kwargs)
-
-    class Meta:
-        unique_together = ('lines','object_id')
         
 class SimpleText(BaseHaikuText):
     """
     A simple descendant of BaseText
     """
     pass
+
 
