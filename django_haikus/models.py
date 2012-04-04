@@ -170,6 +170,9 @@ class HaikuLine(models.Model):
     def save(self, *args, **kwargs):
         self.set_quality()
         super(HaikuLine, self).save(*args, **kwargs)
+
+    class Meta:
+        ordering = ('line_number',)
     
 class HaikuModel(models.Model, Haiku):
     """
@@ -223,6 +226,6 @@ def load_haiku_bigrams_into_bigram_db(sender, instance, created, **kwargs):
     if created:
         from django_haikus.bigrams import BigramHistogram
         BigramHistogram().load(instances=[instance.text])
-
+        
 post_save.connect(load_haiku_bigrams_into_bigram_db, sender=HaikuModel)
 
