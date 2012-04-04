@@ -7,7 +7,8 @@ from django.contrib.auth.models import User
 from django.conf import settings
 
 from django_haikus.models import HaikuRating, HaikuModel, SimpleText, HaikuLine
-from django_haikus.evaluators import SentimentEvaluator, MarkovLineEvaluator
+from django_haikus.evaluators import SentimentEvaluator, MarkovEvaluator
+from django_haikus.line_evaluators import LineEvaluator, MarkovLineEvaluator
 from django_haikus.bigrams import BigramHistogram
 from tagging.models import Tag
 
@@ -75,13 +76,19 @@ class HaikuLineTest(TestCase):
     Tests for the HaikuLine model
     """
     def setUp(self):
-       self.text = SimpleText.objects.create(text="An old silent pond... A frog jumps into the pond. Splash! Silence again.")        
-       self.haiku = HaikuModel.objects.one_from_text(self.text)
+        self.text = SimpleText.objects.create(text="An old silent pond... A frog jumps into the pond. Splash! Silence again.")        
+        self.haiku = HaikuModel.objects.one_from_text(self.text)
         
     def test_source_text(self):
         self.assertEqual(HaikuLine.objects.count(), 3)
         line = HaikuLine.objects.order_by('?')[0]
         self.assertEqual(line.source_text, self.text)
+
+    def test_calculate_quality(self):
+        line = HaikuLine.objects.order_by('?')[0]
+        evaluators = [(LineEvaluator, 1),]
+        self.assertEqual(line.calculate_quality(evaluators=evaluators), 100)
+        
         
 class BaseHaikuTextTest(TestCase):
     """
@@ -152,7 +159,7 @@ class MarkovEvaluatorsTest(TestCase):
     """
     def setUp(self):
         settings.REDIS.update({'db': 1})
-        self.markov_evaluator = MarkovLineEvaluator(prefix="testevaluators")
+        self.markov_evaluator = MarkovEvaluator(prefix="testevaluators")
         self.good_lines = [
             ["jumped", "into", "the", "pool"],
             ["i", "jumped", "into", "it"],
@@ -162,9 +169,9 @@ class MarkovEvaluatorsTest(TestCase):
             ["why", "did", "we", "do", "that"]
             ]
 
-        data = self.markov_evaluator.markov_data
+        self.data = self.markov_evaluator.line_evaluator.markov_data
         for line in self.good_lines:
-            data.add_line_to_index(line)
+            self.data.add_line_to_index(line)
 
     def test_markov_evaluator(self):
         # this haiku matches our model perfectly
@@ -178,7 +185,7 @@ class MarkovEvaluatorsTest(TestCase):
         self.assertEqual(self.markov_evaluator(haiku), 250.0/3)
         
     def tearDown(self):
-        client = self.markov_evaluator.markov_data.client
+        client = self.data.client
         keys = client.keys("testevaluators*")
         for key in keys:
             client.delete(key)

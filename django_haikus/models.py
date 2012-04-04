@@ -14,6 +14,7 @@ from picklefield.fields import PickledObjectField
 from haikus import HaikuText, Haiku
 from haikus.evaluators import DEFAULT_HAIKU_EVALUATORS
 
+from line_evaluators import DEFAULT_LINE_EVALUATORS
 
 class HaikuManager(models.Manager):
     """
@@ -141,6 +142,33 @@ class HaikuLine(models.Model):
             return self.source.text
         else:
             return None
+
+    def calculate_quality(self, evaluators=[]):
+        """
+        Calculate this line's quality
+        """
+        score = 0
+        for evaluator_class, weight in evaluators:
+            evaluator = evaluator_class(weight=weight)
+            score += evaluator(self.text)
+        try:
+            score /= sum([weight for evaluator, weight in evaluators])
+        except ZeroDivisionError:
+            pass
+        return score
+
+    def set_quality(self):
+        """
+        Set the Line's quality field
+        """
+        quality = 0
+        evaluators = getattr(settings, "LINE_EVALUATORS", DEFAULT_LINE_EVALUATORS)
+        quality = self.calculate_quality(evaluators)
+        self.quality = quality
+    
+    def save(self, *args, **kwargs):
+        self.set_quality()
+        super(HaikuLine, self).save(*args, **kwargs)
     
 class HaikuModel(models.Model, Haiku):
     """
@@ -188,5 +216,3 @@ class SimpleText(BaseHaikuText):
     A simple descendant of BaseText
     """
     pass
-
-
