@@ -4,9 +4,11 @@ Models for django_haikus
 import pickle
 from django.db import models
 from django.db.models import Count
+from django.db.models.signals import post_save
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
+
 from picklefield.fields import PickledObjectField
 
 from haikus import HaikuText, Haiku
@@ -168,3 +170,9 @@ class SimpleText(BaseHaikuText):
     """
     pass
 
+def load_haiku_bigrams_into_bigram_db(sender, instance, created, **kwargs):
+    if created:
+        from django_haikus.bigrams import BigramHistogram
+        BigramHistogram().load(instances=[instance.text])
+
+post_save.connect(load_haiku_bigrams_into_bigram_db, sender=HaikuModel)

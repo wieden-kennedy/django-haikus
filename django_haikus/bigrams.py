@@ -15,8 +15,9 @@ class BigramHistogram:
 
         self.key = BaseHaikuText.get_concrete_child().__name__.lower()
 
-    def load(self):
-        instances = self.model.objects.all()
+    def load(self, instances=None):
+        if instances is None:
+            instances = self.model.objects.all()
         for instance in instances:
             t = instance.filtered_text()
             words = t.split()
