@@ -135,7 +135,7 @@ class HaikuLine(models.Model):
     @property
     def source_text(self):
         if hasattr(self.source, 'text'):
-            return self.source_haiku.text
+            return self.source.text
         else:
             return None
     
