@@ -49,6 +49,5 @@ def munge(request):
         if f.is_valid():
             haikus = compose_haikus(**f.cleaned_data)
     else:
-        f = ComposerForm(initial=dict(pattern="1,1,2", count=5, quality_threshold=99, debug='0'))
-    
+        f = ComposerForm(initial=dict(pattern="1,1,2", count=5, quality_threshold=0, debug='0', video=request.GET.get('video', None)))
     return render_to_response("django_haikus/munge.html", { 'haikus': haikus, 'form': f }, context_instance=RC(request))

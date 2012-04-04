@@ -253,6 +253,13 @@ class BigramHistogramConstructionTest(TestCase):
         self.assertEqual(self.histogram.get('a,true'), 50.0)
         self.assertEqual(self.histogram.get('nilesh,ashra'), False)
 
+    def testAutoPopulationOnHaikuCreation(self):
+        self.histogram = BigramHistogram()
+        self.assertEqual(self.histogram.count(), 0)
+        comment = SimpleText.objects.create(text="i jumped into it, it made a big sloppy mess, why did i do that?")
+        haiku = HaikuModel.objects.all_from_text(comment)[0]
+        self.assertEqual(self.histogram.count(), 14 + 2) # plus 2 for __max, on for __max_bigram
+
     def tearDown(self):
         self.histogram.flush()
 

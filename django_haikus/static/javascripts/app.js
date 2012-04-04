@@ -111,14 +111,3 @@ $(document).ready(function () {
 	});
 
 });
-
-
-function initializeCycle() {
-    $('#haikus').cycle({ 
-	fx:     'fade', 
-	speed:  'fast', 
-	timeout: 0, 
-	next:   '#next-haiku', 
-	prev:   '#prev-haiku' 
-    });
-}

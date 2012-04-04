@@ -23,12 +23,6 @@ class Command(BaseCommand):
             default=1,
             help='Number of haikus to compose'),
 
-        make_option('--quality_threshold',
-            action='store',
-            dest='quality_threshold',
-            default=80,
-            help='Quality of haikus'),
-
         make_option('--debug',
             action='store_true',
             dest='debug',
