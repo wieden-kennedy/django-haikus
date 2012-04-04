@@ -223,7 +223,7 @@ class SimpleText(BaseHaikuText):
 
 
 def load_haiku_bigrams_into_bigram_db(sender, instance, created, **kwargs):
-    if created:
+    if created and not instance.is_composite:
         from django_haikus.bigrams import BigramHistogram
         BigramHistogram().load(instances=[instance.text])
         
