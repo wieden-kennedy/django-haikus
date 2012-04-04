@@ -25,6 +25,9 @@ class HaikuManager(models.Manager):
     def unrated(self):
         return self.get_query_set().annotate(ratings_count=Count('ratings')).filter(ratings_count=0)
 
+    def composite(self):
+        return self.get_query_set().filter(is_composite=True)
+
     def all_from_text(self, text):
         """
         Create HaikuModel objects for each haiku in the given text

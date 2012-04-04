@@ -6,7 +6,7 @@ from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.conf import settings
 
-from django_haikus.models import HaikuRating, HaikuModel, SimpleText
+from django_haikus.models import HaikuRating, HaikuModel, SimpleText, HaikuLine
 from django_haikus.evaluators import SentimentEvaluator, MarkovLineEvaluator
 from django_haikus.bigrams import BigramHistogram
 from tagging.models import Tag
@@ -36,6 +36,15 @@ class HaikuManagerTest(TestCase):
         self.unrated = HaikuModel.objects.one_from_text(self.text2)
         self.unrated.save()
 
+    def test_composite(self):
+        """
+        Test that the composite method returns only those haikus that are marked as composites
+        """
+        self.rated.is_composite=True
+        self.rated.save()
+        self.assertTrue(self.rated in HaikuModel.objects.composite())
+        self.assertFalse(self.unrated in HaikuModel.objects.composite())
+
     def test_rated(self):
         rated_haikus = HaikuModel.objects.rated()
         self.assertTrue(self.rated in rated_haikus)
@@ -45,6 +54,34 @@ class HaikuManagerTest(TestCase):
         unrated_haikus = HaikuModel.objects.unrated()
         self.assertTrue(self.unrated in unrated_haikus)
         self.assertFalse(self.rated in unrated_haikus)
+
+
+class HaikuModelTest(TestCase):
+    def setUp(self):
+        self.text = SimpleText.objects.create(text="An old silent pond... A frog jumps into the pond. Splash! Silence again.")
+        HaikuModel.objects.all_from_text(self.text)
+
+    def test_get_lines(self):
+        """
+        Ensure that get_lines returns a list of unicode/strings
+        """
+        haiku = HaikuModel.objects.all()[0]
+        self.assertEqual(type(HaikuLine.objects.all()), type(haiku.lines.all()))
+        self.assertEqual(type(haiku.get_lines()), list)
+        self.assertTrue(type(haiku.get_lines()[0]) in [unicode, str])
+
+class HaikuLineTest(TestCase):
+    """
+    Tests for the HaikuLine model
+    """
+    def setUp(self):
+       self.text = SimpleText.objects.create(text="An old silent pond... A frog jumps into the pond. Splash! Silence again.")        
+       self.haiku = HaikuModel.objects.one_from_text(self.text)
+        
+    def test_source_text(self):
+        self.assertEqual(HaikuLine.objects.count(), 3)
+        line = HaikuLine.objects.order_by('?')[0]
+        self.assertEqual(line.source_text, self.text)
         
 class BaseHaikuTextTest(TestCase):
     """
