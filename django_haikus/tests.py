@@ -16,19 +16,11 @@ class HaikuRatingTest(TestCase):
     Test the HaikuRating model
     """
     def test_rate_non_haiku(self):
-        self.haiku = HaikuModel.objects.create(lines=["Some text",])
-        rating = HaikuRating(haiku=self.haiku, rating=50, user="grant")
-        rating.save()
-        self.assertEqual(HaikuRating.objects.count(), 1)
-
         #user is not an instance of BaseHaiku
         self.user = User.objects.create_user('test', 'test@wk.com', 'password')
         rating = HaikuRating(haiku=self.user, rating=50, user="grant")
         self.assertRaises(TypeError, rating.save)
-        self.assertEqual(HaikuRating.objects.count(), 1)
-
-    def test_lines(self):
-        self.haiku = HaikuModel.objects.create(lines=["some text"])
+        self.assertEqual(HaikuRating.objects.count(), 0)
 
 class HaikuManagerTest(TestCase):
     """
