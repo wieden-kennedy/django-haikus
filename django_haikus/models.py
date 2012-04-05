@@ -8,7 +8,7 @@ from django.db.models.signals import post_save
 from django.conf import settings
 from django.contrib.contenttypes.models import ContentType
 from django.contrib.contenttypes import generic
-from django.db.models.signals import post_save
+from django.db.models.signals import post_save, m2m_changed
 from django.dispatch import receiver
 from picklefield.fields import PickledObjectField
 
@@ -57,10 +57,12 @@ class HaikuManager(models.Manager):
         else:
             haiku_model = HaikuModel.objects.create()
         i = 0
+        lines = []
         for line in haiku.get_lines():
             haiku_line = HaikuLine.objects.create(text=line, line_number=i, source_text=text)
-            haiku_model.lines.add(haiku_line)
+            lines.append(haiku_line)
             i += 1
+        haiku_model.lines.add(*lines)
         return haiku_model                                    
         
 class HaikuRating(models.Model):
@@ -183,6 +185,7 @@ class HaikuModel(models.Model, Haiku):
     featured = models.BooleanField(default=False)
     is_composite = models.BooleanField(default=False)
     created_at = models.DateTimeField(auto_now_add=True)
+    full_text = models.TextField(unique=True, null=True)
     
     content_type = models.ForeignKey(ContentType, null=True, blank=True, related_name="haiku_source")
     object_id = models.PositiveIntegerField(null=True, blank=True)
@@ -212,6 +215,7 @@ class HaikuModel(models.Model, Haiku):
             return sum([rating.rating for rating in ratings]) / len(ratings)
         else:
             return None
+
         
 class SimpleText(BaseHaikuText):
     """
@@ -219,6 +223,12 @@ class SimpleText(BaseHaikuText):
     """
     pass
 
+def create_unique_haiku_lines_key(sender, instance, action, reverse, model, pk_set, **kwargs):
+    if action == 'post_add':
+        instance.full_text = ':'.join([str(item) for item in pk_set])    
+        instance.save()
+    
+m2m_changed.connect(create_unique_haiku_lines_key, sender=HaikuModel.lines.through)
 
 def load_haiku_bigrams_into_bigram_db(sender, instance, created, **kwargs):
     if created:

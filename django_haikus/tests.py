@@ -5,8 +5,9 @@ from django.test import TestCase
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.conf import settings
+from django.db import IntegrityError
 
-from django_haikus.models import HaikuRating, HaikuModel, SimpleText, HaikuLine
+from django_haikus.models import HaikuRating, HaikuModel, HaikuLine, SimpleText, HaikuLine
 from django_haikus.evaluators import SentimentEvaluator, MarkovEvaluator
 from django_haikus.line_evaluators import LineEvaluator, MarkovLineEvaluator
 from django_haikus.bigrams import BigramHistogram
@@ -70,6 +71,20 @@ class HaikuModelTest(TestCase):
         self.assertEqual(type(HaikuLine.objects.all()), type(haiku.lines.all()))
         self.assertEqual(type(haiku.get_lines()), list)
         self.assertTrue(type(haiku.get_lines()[0]) in [unicode, str])
+
+    def test_haiku_lines_uniqueness(self):
+        """
+        Ensure that a haiku cannot have the exact set of lines from another haiku
+        """        
+        haiku = HaikuModel.objects.all_from_text(self.text)[0]
+
+        haiku1 = HaikuModel.objects.create()
+        lines = [haiku.lines.all()[1], haiku.lines.all()[1], haiku.lines.all()[1]]
+        haiku1.lines.add(*lines)
+
+        #this is bad
+        haiku2 = HaikuModel.objects.create()
+        self.assertRaises(IntegrityError, haiku2.lines.add, *lines)
 
 class HaikuLineTest(TestCase):
     """
