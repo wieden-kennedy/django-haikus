@@ -13,14 +13,8 @@ def compose_haikus(pattern, count=1, quality_threshold=80, debug='0', *args, **k
         composed = HaikuModel.objects.create(is_composite=True)
         line = 0
         for source_haiku in pattern:
-            if debug == '1':
-                d = "[PK: %s]" % haikus[source_haiku].pk
-            else:
-                d = ''
-
             composed.lines.add(haikus[source_haiku].lines.all()[line])
             line += 1
-            
         h.append(composed)
 
     return h

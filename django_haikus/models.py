@@ -30,31 +30,35 @@ class HaikuManager(models.Manager):
     def composite(self):
         return self.get_query_set().filter(is_composite=True)
 
-    def all_from_text(self, text):
+    def all_from_text(self, text, source=None):
         """
         Create HaikuModel objects for each haiku in the given text
         """
         haikus = []
         for haiku in text.get_haikus():       
-            haiku_model = self._model_from_haiku(haiku, text)
+            haiku_model = self._model_from_haiku(haiku, text, source)
             haikus.append(haiku_model)
         return haikus
 
-    def one_from_text(self, text):
+    def one_from_text(self, text, source=None):
         """
         Create a HaikuModel for the first occurence of a haiku in the text
         """
-        haiku_model = self._model_from_haiku(text.get_haiku(), text)
+        haiku_model = self._model_from_haiku(text.get_haiku(), text, source)
         return haiku_model
 
-    def _model_from_haiku(self, haiku, text):
+    def _model_from_haiku(self, haiku, text, source=None):
         """
         Method for construction a single HaikuModel instance
         """
-        haiku_model = HaikuModel.objects.create(text=text)
+        if source:
+            print source
+            haiku_model = HaikuModel.objects.create(source=source)
+        else:
+            haiku_model = HaikuModel.objects.create()
         i = 0
         for line in haiku.get_lines():
-            haiku_line = HaikuLine.objects.create(text=line, line_number=i, source=haiku_model)
+            haiku_line = HaikuLine.objects.create(text=line, line_number=i, source_text=text)
             haiku_model.lines.add(haiku_line)
             i += 1
         return haiku_model                                    
@@ -120,7 +124,7 @@ class BaseHaikuText(models.Model, HaikuText):
         if len(subclasses) > 0:
             child = getattr(settings, "TEXT_MODEL", subclasses[0])
         else:
-            child = SimpleHaiku
+            child = SimpleText
         return child
             
     class Meta:
@@ -133,16 +137,10 @@ class HaikuLine(models.Model):
     line_number = models.IntegerField()
     text = models.TextField()   
     quality = models.IntegerField(default=0)
-    source = generic.GenericForeignKey('content_type', 'object_id')
+    
+    source_text = generic.GenericForeignKey('content_type', 'object_id')
     object_id = models.PositiveIntegerField()
     content_type = models.ForeignKey(ContentType)
-
-    @property
-    def source_text(self):
-        if hasattr(self.source, 'text'):
-            return self.source.text
-        else:
-            return None
 
     def calculate_quality(self, evaluators=[]):
         """
@@ -168,6 +166,8 @@ class HaikuLine(models.Model):
         self.quality = quality
     
     def save(self, *args, **kwargs):
+        if self.source_text is not None and not isinstance(self.source_text, BaseHaikuText):
+            raise TypeError("Text model must descend from BaseHaikuText")
         self.set_quality()
         super(HaikuLine, self).save(*args, **kwargs)
 
@@ -179,16 +179,19 @@ class HaikuModel(models.Model, Haiku):
     A model wrapper for the Haiku object
     """
     lines = models.ManyToManyField(HaikuLine)
-    content_type = models.ForeignKey(ContentType, null=True, blank=True, related_name="haikus")
-    object_id = models.PositiveIntegerField(null=True, blank=True)
-    text = generic.GenericForeignKey('content_type','object_id')
     quality = models.IntegerField(default=0)
-    ratings = generic.GenericRelation(HaikuRating,
-                                content_type_field='content_type',
-                                object_id_field='object_id')
-    up_votes = models.PositiveIntegerField(default=0)
-    down_votes = models.PositiveIntegerField(default=0)
+    featured = models.BooleanField(default=False)
     is_composite = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+    
+    content_type = models.ForeignKey(ContentType, null=True, blank=True, related_name="haiku_source")
+    object_id = models.PositiveIntegerField(null=True, blank=True)
+    source = generic.GenericForeignKey('content_type', 'object_id')
+
+    ratings = generic.GenericRelation(HaikuRating,
+                                      content_type_field='content_type',
+                                      object_id_field='object_id')
+    
     objects = HaikuManager()
 
     def get_lines(self):
@@ -209,11 +212,6 @@ class HaikuModel(models.Model, Haiku):
             return sum([rating.rating for rating in ratings]) / len(ratings)
         else:
             return None
-
-    def save(self, *args, **kwargs):
-        if self.text is not None and not isinstance(self.text, BaseHaikuText):
-            raise TypeError("Text model must descend from BaseHaikuText")
-        return super(HaikuModel, self).save(*args, **kwargs)
         
 class SimpleText(BaseHaikuText):
     """
@@ -223,9 +221,9 @@ class SimpleText(BaseHaikuText):
 
 
 def load_haiku_bigrams_into_bigram_db(sender, instance, created, **kwargs):
-    if created and not instance.is_composite:
+    if created:
         from django_haikus.bigrams import BigramHistogram
-        BigramHistogram().load(instances=[instance.text])
+        BigramHistogram().load(instances=[instance])
         
-post_save.connect(load_haiku_bigrams_into_bigram_db, sender=HaikuModel)
+post_save.connect(load_haiku_bigrams_into_bigram_db, sender=BaseHaikuText.get_concrete_child())
 

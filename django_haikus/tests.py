@@ -185,23 +185,18 @@ class MarkovEvaluatorsTest(TestCase):
         self.assertEqual(self.markov_evaluator(haiku), 250.0/3)
         
     def tearDown(self):
-        client = self.data.client
-        keys = client.keys("testevaluators*")
-        for key in keys:
-            client.delete(key)
-    
+        self.data.client.flushdb()
 
 class BigramHistogramConstructionTest(TestCase):
     """
     Test that (A) the bigram histogram is constructed correctly 
     """
     def setUp(self):
+        settings.REDIS.update({'db': 1})
         settings.TEXT_MODEL = SimpleText
-        self.comments = []
-        self.comments.append(SimpleText.objects.create(text="A can of cherry coke makes the thing awesome"))
-        self.comments.append(SimpleText.objects.create(text="Watch for the sunrise, and in a split second and there goes the boat across the horizon"))
-        self.comments.append(SimpleText.objects.create(text="a true soul surfer, there goes an absolute legend in a second"))
-
+        self.histogram = BigramHistogram()
+        self.histogram.flush()
+        
     def test_histogram_values(self):
         test_histogram = {
             'A,can': 1,
@@ -239,10 +234,12 @@ class BigramHistogramConstructionTest(TestCase):
             'a,second': 1,
         }
 
-        self.assertEquals(len(test_histogram.keys()), 33)
+        self.comments = []
+        SimpleText.objects.create(text="A can of cherry coke makes the thing awesome")
+        SimpleText.objects.create(text="Watch for the sunrise, and in a split second and there goes the boat across the horizon")
+        SimpleText.objects.create(text="a true soul surfer, there goes an absolute legend in a second")
 
-        self.histogram = BigramHistogram()
-        self.histogram.load()
+        self.assertEquals(len(test_histogram.keys()), 33)
 
         self.assertEqual(self.histogram.key, "simpletext")
         self.assertEqual(self.histogram.count(), 33 + 2) # plus 2 for __max, on for __max_bigram
@@ -253,11 +250,8 @@ class BigramHistogramConstructionTest(TestCase):
         self.assertEqual(self.histogram.get('a,true'), 50.0)
         self.assertEqual(self.histogram.get('nilesh,ashra'), False)
 
-    def testAutoPopulationOnHaikuCreation(self):
-        self.histogram = BigramHistogram()
-        self.assertEqual(self.histogram.count(), 0)
+    def testAutoPopulationOnCommentCreation(self):
         comment = SimpleText.objects.create(text="i jumped into it, it made a big sloppy mess, why did i do that?")
-        haiku = HaikuModel.objects.all_from_text(comment)[0]
         self.assertEqual(self.histogram.count(), 14 + 2) # plus 2 for __max, on for __max_bigram
 
     def tearDown(self):
