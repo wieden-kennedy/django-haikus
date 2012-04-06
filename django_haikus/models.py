@@ -234,7 +234,6 @@ class SimpleText(BaseHaikuText):
 def create_unique_haiku_lines_key(sender, instance, action, reverse, model, pk_set, **kwargs):
     if action == 'post_add':
         key = hashlib.sha1()
-        print ' '.join([line.text for line in HaikuLine.objects.filter(pk__in=pk_set)])
         key.update(' '.join([line.text for line in HaikuLine.objects.filter(pk__in=pk_set)]))
         instance.full_text = key.hexdigest()
         instance.save()

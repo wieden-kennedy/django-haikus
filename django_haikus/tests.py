@@ -57,6 +57,17 @@ class HaikuManagerTest(TestCase):
         self.assertTrue(self.unrated in unrated_haikus)
         self.assertFalse(self.rated in unrated_haikus)
 
+    def test_all_from_text(self):
+        text = SimpleText.objects.create(text="frak "*100)
+        # we create no duplicates
+        assert len(HaikuModel.objects.all_from_text(text)) == 1
+        assert len(HaikuModel.objects.all_from_text(text)) == 0
+
+        #there are 2 unique haikus here
+        text = SimpleText.objects.create(text="frik frak "*100)
+        assert len(HaikuModel.objects.all_from_text(text)) == 2
+
+        
 
 class HaikuModelTest(TestCase):
     def setUp(self):
