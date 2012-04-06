@@ -33,5 +33,3 @@ class Command(BaseCommand):
                         if len(good_line) > 0:
                             markov_data.add_line_to_index(line)
             client.incr("train_nps")
-        
-        

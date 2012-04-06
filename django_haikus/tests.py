@@ -11,6 +11,7 @@ from django_haikus.models import HaikuRating, HaikuModel, HaikuLine, SimpleText,
 from django_haikus.evaluators import SentimentEvaluator, MarkovEvaluator
 from django_haikus.line_evaluators import LineEvaluator, MarkovLineEvaluator
 from django_haikus.bigrams import BigramHistogram
+from django_haikus.composer import pick_random, compose_haikus
 from tagging.models import Tag
 
 class HaikuRatingTest(TestCase):
@@ -272,4 +273,24 @@ class BigramHistogramConstructionTest(TestCase):
     def tearDown(self):
         self.histogram.flush()
 
+
+class ComposeHaikuTests(TestCase):
+
+    def test_pick_random(self):
+        t1 = SimpleText.objects.create(text="An old silent pond... A frog jumps into the pond. Splash! Silence again hello the world is on the word for the win in case there is a word with out the loss of the win")        
+        HaikuModel.objects.all_from_text(t1, source=t1)
+
+        t2 = SimpleText.objects.create(text="Watch for the sunrise, and in a split second and there goes the boat across the horizon")
+        HaikuModel.objects.all_from_text(t2, source=t2)
+
+        assert HaikuModel.objects.count() > 0
+
+        h = list(pick_random(HaikuModel, count=1))
+        assert h[0].pk is not None
+
+        assert HaikuModel.objects.filter(is_composite=True).count() == 0
+
+        compose_haikus('1,2,1', source=t1, quality_threshold=0, count=10)
+
+        assert HaikuModel.objects.filter(is_composite=True).count() > 1
 

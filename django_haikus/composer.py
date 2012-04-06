@@ -1,3 +1,6 @@
+import random
+
+from django.db.models import Max
 from django import forms
 from django.db import IntegrityError
 from django.contrib.contenttypes.models import ContentType
@@ -9,10 +12,12 @@ def compose_haikus(pattern, source=None, count=1, quality_threshold=80, debug='0
     for i in range(0, int(count)):
         haikus = {}
         for i in set(pattern):          
-            if source:                
-                haikus[i] = HaikuModel.objects.filter(quality__gte=quality_threshold, content_type=ContentType.objects.get_for_model(source), object_id=source.id, is_composite=False).order_by('?')[0]
+            if source:
+                queryset_filter = dict(quality__gte=quality_threshold, content_type=ContentType.objects.get_for_model(source), object_id=source.id, is_composite=False)
+                haikus[i] = list(pick_random(HaikuModel, filter=queryset_filter))[0]
             else:
-                haikus[i] = HaikuModel.objects.filter(quality__gte=quality_threshold, is_composite=False).order_by('?')[0]
+                queryset_filter = dict(quality__gte=quality_threshold, is_composite=False)
+                haikus[i] = list(pick_random(HaikuModel, filter=queryset_filter))[0]
 
         composed = HaikuModel.objects.create(is_composite=True, source=source)
         line = 0
@@ -29,6 +34,11 @@ def compose_haikus(pattern, source=None, count=1, quality_threshold=80, debug='0
         except IntegrityError:
             composed.delete()
     return h
+
+def pick_random(model, filter={}, count=1):
+    ids = model.objects.filter(**filter).values('id')
+    for i in range(0, count):
+        yield model.objects.get(pk=random.choice(ids)['id'])
 
 class ComposerForm(forms.Form):
     pattern = forms.CharField()
