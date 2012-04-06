@@ -22,7 +22,7 @@ class Command(BaseCommand):
         else:
             client = redis.Redis()
 
-        if not client.exists("train_nps"):
+        if client.exists("train_nps"):
             print "Already trained on nps data!"
         else:
             pattern = re.compile('([a-zA-Z0-9\-]*User\d+|ACTION)')

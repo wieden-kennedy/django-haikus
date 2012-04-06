@@ -96,7 +96,7 @@ class MarkovEvaluator(HaikuEvaluator):
     markov model for 'good' lines
     """
     def __init__(self, weight=1, prefix=None):
-        self.line_evaluator = MarkovLineEvaluator(weight=1, prefix=prefix)
+        self.line_evaluator = MarkovLineEvaluator(weight=1, prefix=prefix or getattr(settings, "MARKOV_DATA_PREFIX", "goodlines"))
         super(MarkovEvaluator, self).__init__(weight=weight)
         
     def evaluate(self, haiku):

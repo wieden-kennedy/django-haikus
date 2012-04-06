@@ -215,6 +215,15 @@ class MarkovEvaluatorsTest(TestCase):
         comment = SimpleText.objects.create(text="i jumped into it, it made a big sloppy mess, why did i do it?")
         haiku = HaikuModel.objects.all_from_text(comment)[0]
         self.assertEqual(self.markov_evaluator(haiku), 250.0/3)
+
+    def test_markov_line_evaluator(self):
+        comment = SimpleText.objects.create(text="i jumped into it, it made a big sloppy mess, why did i do that?")
+        haiku = HaikuModel.objects.all_from_text(comment)[0]
+        assert self.markov_evaluator.line_evaluator(haiku.lines.all()[0].text) == 100
+
+        comment = SimpleText.objects.create(text="i jumped into it, it made a big sloppy mess, why did i do it?")
+        haiku = HaikuModel.objects.all_from_text(comment)[0]
+        assert self.markov_evaluator.line_evaluator(haiku.lines.all()[2].text) == 50
         
     def tearDown(self):
         self.data.client.flushdb()

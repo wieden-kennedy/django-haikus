@@ -62,6 +62,8 @@ class HaikuManager(models.Manager):
         lines = []
         for line in haiku.get_lines():
             haiku_line = HaikuLine.objects.create(text=line, line_number=i, source_text=text)
+            haiku_line.set_quality()
+            haiku_line.save()
             lines.append(haiku_line)
             i += 1
         try:

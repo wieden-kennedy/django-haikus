@@ -31,8 +31,8 @@ class MarkovLineEvaluator(LineEvaluator):
         self.markov_data = Markov(prefix=prefix, **getattr(settings, 'REDIS', {}))
         super(MarkovLineEvaluator, self).__init__(weight=weight)
         
-    def evaluate(self, line):
-       return self.markov_data.score_for_line(line.split())
+    def evaluate(self, line):        
+        return self.markov_data.score_for_line(line.split())
 
 
 DEFAULT_LINE_EVALUATORS = [
