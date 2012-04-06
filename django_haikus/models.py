@@ -189,9 +189,9 @@ class HaikuModel(models.Model, Haiku):
     A model wrapper for the Haiku object
     """
     lines = models.ManyToManyField(HaikuLine)
-    quality = models.IntegerField(default=0)
+    quality = models.IntegerField(default=0, db_index=True)
     featured = models.BooleanField(default=False)
-    is_composite = models.BooleanField(default=False)
+    is_composite = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     full_text = models.TextField(unique=True, null=True)
     
