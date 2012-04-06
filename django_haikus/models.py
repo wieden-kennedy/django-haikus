@@ -52,7 +52,6 @@ class HaikuManager(models.Manager):
         Method for construction a single HaikuModel instance
         """
         if source:
-            print source
             haiku_model = HaikuModel.objects.create(source=source)
         else:
             haiku_model = HaikuModel.objects.create()
@@ -63,6 +62,8 @@ class HaikuManager(models.Manager):
             lines.append(haiku_line)
             i += 1
         haiku_model.lines.add(*lines)
+        haiku_model.set_quality()
+        haiku_model.save()
         return haiku_model                                    
         
 class HaikuRating(models.Model):
