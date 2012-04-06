@@ -76,7 +76,7 @@ class HaikuModelTest(TestCase):
         """
         Ensure that a haiku cannot have the exact set of lines from another haiku
         """        
-        haiku = HaikuModel.objects.all_from_text(self.text)[0]
+        haiku = HaikuModel.objects.all()[0]
 
         haiku1 = HaikuModel.objects.create()
         lines = [haiku.lines.all()[1], haiku.lines.all()[1], haiku.lines.all()[1]]
@@ -85,6 +85,11 @@ class HaikuModelTest(TestCase):
         #this is bad
         haiku2 = HaikuModel.objects.create()
         self.assertRaises(IntegrityError, haiku2.lines.add, *lines)
+
+        #should get no haikus for another run across the text
+        assert len(HaikuModel.objects.all_from_text(self.text)) == 0
+
+        
 
 class HaikuLineTest(TestCase):
     """

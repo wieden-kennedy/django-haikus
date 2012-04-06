@@ -2,7 +2,9 @@
 Models for django_haikus
 """
 import pickle
-from django.db import models
+import hashlib
+
+from django.db import models, IntegrityError
 from django.db.models import Count
 from django.db.models.signals import post_save
 from django.conf import settings
@@ -35,9 +37,10 @@ class HaikuManager(models.Manager):
         Create HaikuModel objects for each haiku in the given text
         """
         haikus = []
-        for haiku in text.get_haikus():       
+        for haiku in text.get_haikus():         
             haiku_model = self._model_from_haiku(haiku, text, source)
-            haikus.append(haiku_model)
+            if haiku_model:
+                haikus.append(haiku_model)
         return haikus
 
     def one_from_text(self, text, source=None):
@@ -61,9 +64,13 @@ class HaikuManager(models.Manager):
             haiku_line = HaikuLine.objects.create(text=line, line_number=i, source_text=text)
             lines.append(haiku_line)
             i += 1
-        haiku_model.lines.add(*lines)
-        haiku_model.set_quality()
-        haiku_model.save()
+        try:
+            haiku_model.lines.add(*lines)
+            haiku_model.set_quality()
+            haiku_model.save()
+        except IntegrityError:
+            haiku_model.delete()
+            haiku_model = None
         return haiku_model                                    
         
 class HaikuRating(models.Model):
@@ -226,7 +233,10 @@ class SimpleText(BaseHaikuText):
 
 def create_unique_haiku_lines_key(sender, instance, action, reverse, model, pk_set, **kwargs):
     if action == 'post_add':
-        instance.full_text = ':'.join([str(item) for item in pk_set])    
+        key = hashlib.sha1()
+        print ' '.join([line.text for line in HaikuLine.objects.filter(pk__in=pk_set)])
+        key.update(' '.join([line.text for line in HaikuLine.objects.filter(pk__in=pk_set)]))
+        instance.full_text = key.hexdigest()
         instance.save()
     
 m2m_changed.connect(create_unique_haiku_lines_key, sender=HaikuModel.lines.through)
