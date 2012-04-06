@@ -17,21 +17,22 @@ class Command(BaseCommand):
         """
         redis_conf = getattr(settings, 'REDIS', False)
         if redis_conf:
+            print redis_conf
             client = redis.Redis(**redis_conf)
         else:
             client = redis.Redis()
 
-        if client.exists("train_nps"):
+        if not client.exists("train_nps"):
             print "Already trained on nps data!"
         else:
             pattern = re.compile('([a-zA-Z0-9\-]*User\d+|ACTION)')
-            markov_data = Markov(prefix=getattr(settings, "MARKOV_DATA_PREFIX", "goodlines"))
+            markov_data = Markov(prefix=getattr(settings, "MARKOV_DATA_PREFIX", "goodlines"), **redis_conf)
             for line in nltk.corpus.nps_chat.xml_posts():
                 if line.text not in ['JOIN','PART','<empty>'] and len(line.text.split()) > 2:
                     if re.search(pattern, line.text) is None:
                         good_line = HaikuText(line.text.lower()).filtered_text().split()
                         if len(good_line) > 0:
-                            markov_data.add_line_to_index(line)
+                            markov_data.add_line_to_index(good_line)
             client.incr("train_nps")
         
         
