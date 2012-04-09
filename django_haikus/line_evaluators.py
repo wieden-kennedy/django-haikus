@@ -28,7 +28,7 @@ class MarkovLineEvaluator(LineEvaluator):
     """
     def __init__(self, weight=1, prefix=None):
         self.prefix = prefix or getattr(settings, "MARKOV_DATA_PREFIX", "goodlines")
-        self.markov_data = Markov(prefix=prefix, **getattr(settings, 'REDIS', {}))
+        self.markov_data = Markov(prefix=self.prefix, **getattr(settings, 'REDIS', {}))
         super(MarkovLineEvaluator, self).__init__(weight=weight)
         
     def evaluate(self, line):        

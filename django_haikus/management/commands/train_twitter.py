@@ -53,5 +53,5 @@ class Command(BaseCommand):
             try:
                 listener.listen(rules=rules, **auth)
             except KeyboardInterrupt:
-                print "Captured %s tweets" % tweet_count
+                print "Captured %s tweets" % tweet_count 
                 sys.exit()
