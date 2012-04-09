@@ -13,6 +13,7 @@ from django_haikus.line_evaluators import LineEvaluator, MarkovLineEvaluator
 from django_haikus.bigrams import BigramHistogram
 from django_haikus.composer import pick_random, compose_haikus
 from tagging.models import Tag
+from django_haikus.management.commands.train_twitter import strip_tweets
 
 class HaikuRatingTest(TestCase):
     """
@@ -100,8 +101,6 @@ class HaikuModelTest(TestCase):
 
         #should get no haikus for another run across the text
         assert len(HaikuModel.objects.all_from_text(self.text)) == 0
-
-        
 
 class HaikuLineTest(TestCase):
     """
@@ -318,4 +317,22 @@ class ComposeHaikuTests(TestCase):
         compose_haikus('1,2,1', source=t1, quality_threshold=0, count=10)
 
         assert HaikuModel.objects.filter(is_composite=True).count() > 1
+
+class TwitterTrainerTests(TestCase):
+    def test_strip_tweets(self):
+        class FakeTweet(object):
+            def __init__(self, text):
+                self.text = text
+                
+        tweets = [FakeTweet("@RealGrantThomas @Comcast Audio recording or it didn't happen."),
+                  FakeTweet("This http://t.co/i4Fnc0or could be the closest thing to Wonderland #hastag when all is said and done."),
+                  FakeTweet("RT @Isabelawaldorf: #imagine you're kissing Louis, he's squeezing your bum and you reach for his braces to take them off, they cut your")]
+
+        expected = ["Audio recording or it didn't happen.",
+                    'This  could be the closest thing to Wonderland  when all is said and done.',
+                    "you're kissing Louis, he's squeezing your bum and you reach for his braces to take them off, they cut your"]
+
+        print strip_tweets(tweets)
+        assert strip_tweets(tweets) == expected
+
 
