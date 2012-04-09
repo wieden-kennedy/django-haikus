@@ -1,6 +1,7 @@
 """
 A management command for training our markov model for haiku line quality
 """
+import sys
 import re
 from django.conf import settings
 from django.core.management.base import BaseCommand, CommandError
@@ -9,6 +10,8 @@ from haikus import HaikuText
 from markov.markov import Markov
 from twitter_easy_streamer.streamer import Rule, RuleListener
 
+
+tweet_count = 0
 data = Markov(prefix=getattr(settings, "MARKOV_DATA_PREFIX", "goodlines"),  **getattr(settings, 'REDIS', {}))
 
 def strip_tweets(tweets):
@@ -25,9 +28,12 @@ def handle_tweets(tweets):
     """
     Handle tweets by stripping out hashtags, handles, URLs and other offending items
     """
+    global tweet_count
+    global data
     tweet_text = strip_tweets(tweets)
     for tweet in tweet_text:
         #add the split tweet (a list of words) to our markov model
+        tweet_count += 1
         data.add_line_to_index(HaikuText(tweet).filtered_text().lower().split())
         
 class Command(BaseCommand):
@@ -43,4 +49,9 @@ class Command(BaseCommand):
         else:
             # a very inclusive twitter stream to get lots of single lines
             rules = [Rule(track=["be", "the", "to", "and"], on_status=[handle_tweets])]
-            listener.listen(rules=rules, **auth)
+
+            try:
+                listener.listen(rules=rules, **auth)
+            except KeyboardInterrupt:
+                print "Captured %s tweets" % tweet_count
+                sys.exit()
