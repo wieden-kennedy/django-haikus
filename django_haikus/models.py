@@ -209,7 +209,9 @@ class HaikuModel(models.Model, Haiku):
 
     def get_lines(self):
         return [line.text for line in self.lines.all()]
-    
+
+    def flat_lines(self, separator="/"):
+        return separator.join(self.get_lines())
     def set_quality(self):
         """
         Set the Haiku's quality field
