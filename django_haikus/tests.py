@@ -105,7 +105,7 @@ class HaikuModelTest(TestCase):
 
     def test_heat(self):
         """
-        Ensure the head method works as expected
+        Ensure the heat method works as expected
         """
         class DummySource(models.Model, HaikuSource):
             def get_url_for_haiku(self, haiku):
