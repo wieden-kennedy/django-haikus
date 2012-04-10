@@ -5,13 +5,14 @@ from django.test import TestCase
 from django.core.urlresolvers import reverse
 from django.contrib.auth.models import User
 from django.conf import settings
-from django.db import IntegrityError
+from django.db import IntegrityError, models
 
-from django_haikus.models import HaikuRating, HaikuModel, HaikuLine, SimpleText, HaikuLine
+from django_haikus.models import HaikuRating, HaikuModel, HaikuLine, SimpleText, HaikuLine, HaikuSource
 from django_haikus.evaluators import SentimentEvaluator, MarkovEvaluator
 from django_haikus.line_evaluators import LineEvaluator, MarkovLineEvaluator
 from django_haikus.bigrams import BigramHistogram
 from django_haikus.composer import pick_random, compose_haikus
+from django_haikus.util import twitter_shares_for_url, facebook_shares_for_url, get_shares_for_url
 from tagging.models import Tag
 from django_haikus.management.commands.train_twitter import strip_tweets
 
@@ -101,6 +102,30 @@ class HaikuModelTest(TestCase):
 
         #should get no haikus for another run across the text
         assert len(HaikuModel.objects.all_from_text(self.text)) == 0
+
+    def test_heat(self):
+        """
+        Ensure the head method works as expected
+        """
+        class DummySource(models.Model, HaikuSource):
+            def get_url_for_haiku(self, haiku):
+                return "http://www.google.com"
+
+        class MoronSource(models.Model, HaikuSource):
+            pass
+
+    
+        haiku = HaikuModel.objects.all()[0]
+        assert haiku.score() == 0
+        self.assertRaises(ValueError, haiku.heat)
+
+        haiku.source = MoronSource()
+        self.assertRaises(NotImplementedError, haiku.score)
+        
+        haiku.source = DummySource()
+        assert haiku.score() > 0
+        assert haiku.heat() > 0
+        
 
 class HaikuLineTest(TestCase):
     """
@@ -332,7 +357,15 @@ class TwitterTrainerTests(TestCase):
                     'This  could be the closest thing to Wonderland  when all is said and done.',
                     "you're kissing Louis, he's squeezing your bum and you reach for his braces to take them off, they cut your"]
 
-        print strip_tweets(tweets)
         assert strip_tweets(tweets) == expected
 
+class TestUtilityMethods(TestCase):
+    """
+    Test that our utility methods behave as expected
+    """
+    def test_social_shares_for_url(self):
+        url = "http://www.google.com"
+        assert twitter_shares_for_url(url) > 0
+        assert facebook_shares_for_url(url) > 0
+        assert get_shares_for_url(url) == (twitter_shares_for_url(url) + facebook_shares_for_url(url))
 

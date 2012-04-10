@@ -4,6 +4,9 @@ Models for django_haikus
 import pickle
 import hashlib
 
+from datetime import datetime, timedelta
+from math import log
+
 from django.db import models, IntegrityError
 from django.db.models import Count
 from django.db.models.signals import post_save
@@ -18,6 +21,10 @@ from haikus import HaikuText, Haiku
 from haikus.evaluators import DEFAULT_HAIKU_EVALUATORS
 
 from line_evaluators import DEFAULT_LINE_EVALUATORS
+from util import get_shares_for_url
+
+epoch = datetime(1970, 1, 1)
+constant_seconds = 450002
 
 class HaikuManager(models.Manager):
     """
@@ -212,6 +219,7 @@ class HaikuModel(models.Model, Haiku):
 
     def flat_lines(self, separator="/"):
         return separator.join(self.get_lines())
+
     def set_quality(self):
         """
         Set the Haiku's quality field
@@ -220,6 +228,32 @@ class HaikuModel(models.Model, Haiku):
         evaluators = getattr(settings, "HAIKU_EVALUATORS", DEFAULT_HAIKU_EVALUATORS)
         quality = self.calculate_quality(evaluators)
         self.quality = quality
+
+    def score(self):
+        """
+        Get the 'score' for this HaikuModel, specifically the number of times it's been shared
+        via social media
+
+        @raises NotImplemented if source doesn't have get_url_for_haiku
+        """
+        score = 0
+        if self.source is not None:
+            score = get_shares_for_url(self.source.get_url_for_haiku(self))
+        return score
+            
+    def heat(self, epoch=epoch, constant_seconds=constant_seconds):
+        """
+        This HaikuModel's heat based on the reddit ranking algorithm described here:
+        http://amix.dk/blog/post/19588
+        """
+        return log(self.score(), 10) + self._epoch_seconds()/constant_seconds
+
+    def _epoch_seconds(self, epoch=epoch):
+        """
+        Get the number of seconds between self.created_at and the epoch
+        """
+        delta = self.created_at - epoch
+        return delta.days * 86400 + delta.seconds
     
     def average_human_rating(self):
         ratings = self.ratings.all()
@@ -228,12 +262,20 @@ class HaikuModel(models.Model, Haiku):
         else:
             return None
 
+class HaikuSource(object):
+    """
+    A mix-in class for sources of haikus, provides get_url_for_haiku
+    """
+    def get_url_for_haiku(self, haiku):
+        raise NotImplementedError("subclasses of HaikuSource should implement get_url_for_haiku")
+
         
 class SimpleText(BaseHaikuText):
     """
     A simple descendant of BaseText
     """
     pass
+
 
 def create_unique_haiku_lines_key(sender, instance, action, reverse, model, pk_set, **kwargs):
     if action == 'post_add':
