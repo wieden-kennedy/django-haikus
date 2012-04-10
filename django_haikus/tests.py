@@ -13,6 +13,7 @@ from django_haikus.line_evaluators import LineEvaluator, MarkovLineEvaluator
 from django_haikus.bigrams import BigramHistogram
 from django_haikus.composer import pick_random, compose_haikus
 from django_haikus.util import twitter_shares_for_url, facebook_shares_for_url, get_shares_for_url
+from django_haikus.redis_client import client as redis_client
 from tagging.models import Tag
 from django_haikus.management.commands.train_twitter import strip_tweets
 
@@ -117,14 +118,19 @@ class HaikuModelTest(TestCase):
     
         haiku = HaikuModel.objects.all()[0]
         assert haiku.score() == 0
+
         self.assertRaises(ValueError, haiku.heat)
 
         haiku.source = MoronSource()
         self.assertRaises(NotImplementedError, haiku.score)
-        
+
         haiku.source = DummySource()
         assert haiku.score() > 0
-        assert haiku.heat() > 0
+        assert haiku.heat == None
+        assert redis_client().get(haiku._score_key()) == haiku.score()
+        assert redis_client().ttl(haiku._score_key()) == 5*60
+        assert haiku.get_heat() > 0
+        assert haiku.get_heat() == haiku.heat
         
 
 class HaikuLineTest(TestCase):

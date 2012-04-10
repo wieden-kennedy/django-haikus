@@ -22,6 +22,7 @@ from haikus.evaluators import DEFAULT_HAIKU_EVALUATORS
 
 from line_evaluators import DEFAULT_LINE_EVALUATORS
 from util import get_shares_for_url
+from redis_client import client as redis_client
 
 epoch = datetime(1970, 1, 1)
 constant_seconds = 450002
@@ -203,11 +204,13 @@ class HaikuModel(models.Model, Haiku):
     is_composite = models.BooleanField(default=False, db_index=True)
     created_at = models.DateTimeField(auto_now_add=True)
     full_text = models.TextField(unique=True, null=True)
+    heat = models.FloatField(null=True, blank=True)
     
     content_type = models.ForeignKey(ContentType, null=True, blank=True, related_name="haiku_source")
     object_id = models.PositiveIntegerField(null=True, blank=True)
     source = generic.GenericForeignKey('content_type', 'object_id')
-
+    
+    
     ratings = generic.GenericRelation(HaikuRating,
                                       content_type_field='content_type',
                                       object_id_field='object_id')
@@ -229,7 +232,7 @@ class HaikuModel(models.Model, Haiku):
         quality = self.calculate_quality(evaluators)
         self.quality = quality
 
-    def score(self):
+    def score(self, ttl=5*60):
         """
         Get the 'score' for this HaikuModel, specifically the number of times it's been shared
         via social media
@@ -238,15 +241,24 @@ class HaikuModel(models.Model, Haiku):
         """
         score = 0
         if self.source is not None:
-            score = get_shares_for_url(self.source.get_url_for_haiku(self))
+            score = redis_client().get(self._score_key())
+            if score is None:
+                score = get_shares_for_url(self.source.get_url_for_haiku(self))
+                redis_client().setex(self._score_key(), score, ttl)
+                self.heat = None
+                self.save()
         return score
             
-    def heat(self, epoch=epoch, constant_seconds=constant_seconds):
+    def get_heat(self, epoch=epoch, constant_seconds=constant_seconds):
         """
         This HaikuModel's heat based on the reddit ranking algorithm described here:
         http://amix.dk/blog/post/19588
         """
-        return log(self.score(), 10) + self._epoch_seconds()/constant_seconds
+        heat = log(float(self.score()), 10) + self._epoch_seconds()/constant_seconds
+        if heat != self.heat:
+            self.heat = heat
+            self.save()
+        return heat
 
     def _epoch_seconds(self, epoch=epoch):
         """
@@ -254,6 +266,9 @@ class HaikuModel(models.Model, Haiku):
         """
         delta = self.created_at - epoch
         return delta.days * 86400 + delta.seconds
+
+    def _score_key(self):
+        return "haikuscore:%s" % self.id
     
     def average_human_rating(self):
         ratings = self.ratings.all()
