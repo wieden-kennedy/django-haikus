@@ -114,7 +114,6 @@ class HaikuModelTest(TestCase):
 
         class MoronSource(models.Model, HaikuSource):
             pass
-
     
         haiku = HaikuModel.objects.all()[0]
         assert haiku.score() == 0

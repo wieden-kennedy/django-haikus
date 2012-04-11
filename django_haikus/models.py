@@ -25,7 +25,7 @@ from util import get_shares_for_url
 from redis_client import client as redis_client
 
 epoch = datetime(1970, 1, 1)
-constant_seconds = 450002
+constant_seconds = 45000
 
 class HaikuManager(models.Manager):
     """
