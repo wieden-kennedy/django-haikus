@@ -13,7 +13,10 @@ def twitter_shares_for_url(url):
     """
     response = requests.get(TWITTER_URL % url)
     response_dict = json.loads(response.text)
-    return int(response_dict['count'])
+    try: 
+        return int(response_dict['count'])
+    except KeyError:
+        return 0
 
 def facebook_shares_for_url(url):
     """
@@ -21,7 +24,10 @@ def facebook_shares_for_url(url):
     """
     response = requests.get(FB_URL % url)
     response_dict = json.loads(response.text)
-    return int(response_dict['shares'])
+    try:
+        return int(response_dict['shares'])
+    except KeyError:
+        return 0
 
 
 def get_shares_for_url(url):

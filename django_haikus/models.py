@@ -245,16 +245,20 @@ class HaikuModel(models.Model, Haiku):
             if score is None:
                 score = get_shares_for_url(self.source.get_url_for_haiku(self))
                 redis_client().setex(self._score_key(), score, ttl)
-                self.heat = None
-                self.save()
+                self.get_heat(score=score)
         return score
             
-    def get_heat(self, epoch=epoch, constant_seconds=constant_seconds):
+    def get_heat(self, score=None, epoch=epoch, constant_seconds=constant_seconds):
         """
         This HaikuModel's heat based on the reddit ranking algorithm described here:
         http://amix.dk/blog/post/19588
         """
-        heat = log(float(self.score()), 10) + self._epoch_seconds()/constant_seconds
+        if score is None:
+            score = self.score()
+        try:
+            heat = log(float(score), 10) + self._epoch_seconds()/constant_seconds
+        except ValueError:
+            heat 
         if heat != self.heat:
             self.heat = heat
             self.save()

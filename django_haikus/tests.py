@@ -111,7 +111,7 @@ class HaikuModelTest(TestCase):
         class DummySource(models.Model, HaikuSource):
             def get_url_for_haiku(self, haiku):
                 return "http://www.google.com"
-
+            
         class MoronSource(models.Model, HaikuSource):
             pass
     
@@ -125,12 +125,15 @@ class HaikuModelTest(TestCase):
 
         haiku.source = DummySource()
         assert haiku.score() > 0
-        assert haiku.heat == None
         assert redis_client().get(haiku._score_key()) == haiku.score()
         assert redis_client().ttl(haiku._score_key()) == 5*60
         assert haiku.get_heat() > 0
         assert haiku.get_heat() == haiku.heat
-        
+
+        #ensure heat changes with score
+        heat = haiku.get_heat()
+        assert haiku.get_heat(score=3) != heat
+        assert haiku.heat == haiku.get_heat(score=3) 
 
 class HaikuLineTest(TestCase):
     """
@@ -374,3 +377,8 @@ class TestUtilityMethods(TestCase):
         assert facebook_shares_for_url(url) > 0
         assert get_shares_for_url(url) == (twitter_shares_for_url(url) + facebook_shares_for_url(url))
 
+
+        url = "http://someurlwhichwillneverbeshared.xxx"
+        assert twitter_shares_for_url(url) == 0
+        assert facebook_shares_for_url(url) == 0
+        assert get_shares_for_url(url) == 0
