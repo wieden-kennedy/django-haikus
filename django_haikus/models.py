@@ -37,8 +37,15 @@ class HaikuManager(models.Manager):
     def unrated(self):
         return self.get_query_set().annotate(ratings_count=Count('ratings')).filter(ratings_count=0)
 
-    def composite(self):
-        return self.get_query_set().filter(is_composite=True)
+    def composite(self, source=None):
+        if source is None:
+            qs = self.get_query_set()
+        else:
+            qs = self.by_source(source)
+        return qs.filter(is_composite=True)
+
+    def by_source(self, source):
+        return self.get_query_set().filter(content_type=ContentType.objects.get_for_model(source), object_id=source.id)
 
     def all_from_text(self, text, source=None):
         """
