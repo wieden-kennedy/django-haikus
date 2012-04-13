@@ -52,7 +52,12 @@ class HaikuManager(models.Manager):
         Create HaikuModel objects for each haiku in the given text
         """
         haikus = []
-        for haiku in text.get_haikus():         
+        text_haikus = text.get_haikus()
+        if len(text_haikus) > 0:
+            text.is_haiku = True
+            text.save()
+            
+        for haiku in text_haikus:         
             haiku_model = self._model_from_haiku(haiku, text, source)
             if haiku_model:
                 haikus.append(haiku_model)
