@@ -3,9 +3,12 @@ Models for django_haikus
 """
 import pickle
 import hashlib
+import logging
 
 from datetime import datetime, timedelta
 from math import log
+
+from redis.exceptions import ResponseError
 
 from django.db import models, IntegrityError
 from django.db.models import Count
@@ -26,6 +29,7 @@ from redis_client import client as redis_client
 
 epoch = datetime(1970, 1, 1)
 constant_seconds = 45000
+logger = logging.getLogger(__name__)
 
 class HaikuManager(models.Manager):
     """
@@ -319,8 +323,12 @@ m2m_changed.connect(create_unique_haiku_lines_key, sender=HaikuModel.lines.throu
 
 def load_haiku_bigrams_into_bigram_db(sender, instance, created, **kwargs):
     if created:
-        from django_haikus.bigrams import BigramHistogram
-        BigramHistogram().load(instances=[instance])
+        try: 
+            from django_haikus.bigrams import BigramHistogram
+            BigramHistogram().load(instances=[instance])
+        except ResponseError as e:
+            #redis is full!
+            logger.error("Redis response error: %s" % e)
         
 post_save.connect(load_haiku_bigrams_into_bigram_db, sender=BaseHaikuText.get_concrete_child())
 
