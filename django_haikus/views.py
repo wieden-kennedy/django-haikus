@@ -14,7 +14,7 @@ def login(request):
             request.session['training-user'] = username
             return HttpResponseRedirect(reverse("train"))
 
-    return render_to_response("harvest/login.html", { }, context_instance=RC(request))
+    return render_to_response("django_haikus/login.html", { }, context_instance=RC(request))
 
 def logout(request):
     del request.session['training-user']

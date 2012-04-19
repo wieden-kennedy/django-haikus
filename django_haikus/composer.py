@@ -35,6 +35,7 @@ def compose_haikus(pattern, source=None, count=1, quality_threshold=80, debug='0
             composed.delete()
     return h
 
+
 def pick_random(model, filter={}, count=1):
     ids = model.objects.filter(**filter).values('id')
     for i in range(0, count):
