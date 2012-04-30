@@ -1,2 +1,4 @@
-== Django Haikus ==
-A django app that helps you use computers to find haikus in arbitrary texts and rate them.
+Django Haikus
+=============
+A Django app that helps you use [haikus](https://github.com/wieden-kennedy/haikus) to find haikus in arbitrary text,
+save it to a Django model and evaluate its quality.
