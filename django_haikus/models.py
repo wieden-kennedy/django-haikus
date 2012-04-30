@@ -258,7 +258,7 @@ class HaikuModel(models.Model, Haiku):
         score = 0
         if self.source is not None:
             score = redis_client().get(self._score_key())
-            if score is None:
+            if score is None:                
                 score = get_shares_for_url(self.source.get_url_for_haiku(self))
                 redis_client().setex(self._score_key(), score, ttl)
                 self.get_heat(score=score)
@@ -323,12 +323,11 @@ m2m_changed.connect(create_unique_haiku_lines_key, sender=HaikuModel.lines.throu
 
 def load_haiku_bigrams_into_bigram_db(sender, instance, created, **kwargs):
     if created:
-        try: 
+        try:
             from django_haikus.bigrams import BigramHistogram
             BigramHistogram().load(instances=[instance])
         except ResponseError as e:
             #redis is full!
             logger.error("Redis response error: %s" % e)
-        
-post_save.connect(load_haiku_bigrams_into_bigram_db, sender=BaseHaikuText.get_concrete_child())
 
+post_save.connect(load_haiku_bigrams_into_bigram_db, sender=BaseHaikuText.get_concrete_child())
