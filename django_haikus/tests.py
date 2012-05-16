@@ -21,7 +21,7 @@ class HaikuRatingTest(TestCase):
     """
     Test the HaikuRating model
     """
-    def test_rate_non_haiku(self):
+    def test_rate_non_haiku(self):   
         #user is not an instance of BaseHaiku
         self.user = User.objects.create_user('test', 'test@wk.com', 'password')
         rating = HaikuRating(haiku=self.user, rating=50, user="grant")
