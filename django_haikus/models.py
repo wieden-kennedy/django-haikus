@@ -330,4 +330,3 @@ def load_haiku_bigrams_into_bigram_db(sender, instance, created, **kwargs):
             #redis is full!
             logger.error("Redis response error: %s" % e)
 
-post_save.connect(load_haiku_bigrams_into_bigram_db, sender=BaseHaikuText.get_concrete_child())
