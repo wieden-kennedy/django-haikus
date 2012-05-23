@@ -1,0 +1,13 @@
+{% extends "django_haikus/base.html" %}
+
+{% block content %}
+    <div class="row">
+        <form class="nice" action="{% url trainer-login %}" method="POST">
+            {% csrf_token %}
+            <label>Name</label>
+            <input type="text" class="input-text" name="name"/>
+            <input type="submit" class="small button" val="Login"/>
+        </form>
+    </div>
+
+{% endblock %}

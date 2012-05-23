@@ -17,6 +17,7 @@ from django_haikus.models import HaikuModel
 from django_haikus.bigrams import BigramHistogram
 
 from line_evaluators import MarkovLineEvaluator
+from markov import Markov
     
 class SentimentEvaluator(HaikuEvaluator):
     """
@@ -104,3 +105,20 @@ class MarkovEvaluator(HaikuEvaluator):
         for line in haiku.get_lines():
             score += self.line_evaluator(line)
         return score/len(haiku.get_lines())
+
+class FullTextMarkovEvaluator(HaikuEvaluator):
+    """
+    Evaluate the full text of a haiku using Markov chains, determine how it 
+    """
+    def __init__(self, weight=1, prefix=None):
+        self.prefix = prefix or getattr(settings, "MARKOV_DATA_PREFIX", "goodlines")
+        self.data = Markov(prefix=prefix, **getattr(settings, 'REDIS', {}))
+        super(FullTextMarkovEvaluator, self).__init__(weight=weight)
+    
+    def evaluate(self, haiku):
+        haiku_text = []
+        for line in haiku.get_lines():
+            haiku_text += line.split()
+        score = self.data.score_for_line(haiku_text)
+        return score
+        

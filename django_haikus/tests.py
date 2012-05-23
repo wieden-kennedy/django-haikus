@@ -8,7 +8,7 @@ from django.conf import settings
 from django.db import IntegrityError, models
 
 from django_haikus.models import HaikuRating, HaikuModel, HaikuLine, SimpleText, HaikuLine, HaikuSource
-from django_haikus.evaluators import SentimentEvaluator, MarkovEvaluator
+from django_haikus.evaluators import SentimentEvaluator, MarkovEvaluator, FullTextMarkovEvaluator
 from django_haikus.line_evaluators import LineEvaluator, MarkovLineEvaluator
 from django_haikus.bigrams import BigramHistogram
 from django_haikus.composer import pick_random, compose_haikus
@@ -21,7 +21,7 @@ class HaikuRatingTest(TestCase):
     """
     Test the HaikuRating model
     """
-    def test_rate_non_haiku(self):
+    def test_rate_non_haiku(self):   
         #user is not an instance of BaseHaiku
         self.user = User.objects.create_user('test', 'test@wk.com', 'password')
         rating = HaikuRating(haiku=self.user, rating=50, user="grant")
@@ -228,6 +228,7 @@ class MarkovEvaluatorsTest(TestCase):
     def setUp(self):
         settings.REDIS.update({'db': 1})
         self.markov_evaluator = MarkovEvaluator(prefix="testevaluators")
+        self.full_evaluator = FullTextMarkovEvaluator(prefix="testevaluators")
         self.good_lines = [
             ["jumped", "into", "the", "pool"],
             ["i", "jumped", "into", "it"],
@@ -260,6 +261,12 @@ class MarkovEvaluatorsTest(TestCase):
         comment = SimpleText.objects.create(text="i jumped into it, it made a big sloppy mess, why did i do it?")
         haiku = HaikuModel.objects.all_from_text(comment)[0]
         assert self.markov_evaluator.line_evaluator(haiku.lines.all()[2].text) == 50
+
+    def test_full_text_markov_evaluator(self):
+        comment = SimpleText.objects.create(text="i jumped into it, it made a big sloppy mess, why did i do that?")
+        haiku = HaikuModel.objects.all_from_text(comment)[0]
+        self.assertEqual(self.full_evaluator(haiku), 1000.0/14)
+
         
     def tearDown(self):
         self.data.client.flushdb()

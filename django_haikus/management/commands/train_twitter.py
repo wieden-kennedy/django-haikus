@@ -35,7 +35,7 @@ def handle_tweets(tweets):
         #add the split tweet (a list of words) to our markov model
         tweet_count += 1
         data.add_line_to_index(HaikuText(tweet).filtered_text().lower().split())
-        
+            
 class Command(BaseCommand):
     def handle(self, *args, **options):
         """
@@ -48,8 +48,7 @@ class Command(BaseCommand):
             print "please add TWITTER_AUTH to your settings"
         else:
             # a very inclusive twitter stream to get lots of single lines
-            rules = [Rule(track=["be", "the", "to", "and"], on_status=[handle_tweets])]
-
+            rules = [Rule(track=["to","be","the","and"], on_status=[handle_tweets], operator="OR")]
             try:
                 listener.listen(rules=rules, **auth)
             except KeyboardInterrupt:
