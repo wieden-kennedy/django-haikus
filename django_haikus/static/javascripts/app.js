@@ -82,32 +82,4 @@ $(document).ready(function () {
 			e.preventDefault();
 		}
 	});
-	// $('body').bind('touchend', function(e) {
-	// 	if (!$(e.target).parents().is('.nav-bar') || !$(e.target).is('.nav-bar')) {
-	// 		$('.nav-bar li .flyout').is(':visible').hide();
-	// 	}
-	// });
-
-	/* DISABLED BUTTONS ------------- */
-	/* Gives elements with a class of 'disabled' a return: false; */
-
-	/* W+K Custom */
-	// $("#popular a").hover(function(){
-	// 	$(this).find('.info').fadeIn(100);
-	// },
-	// function(){
-	// 	$(this).find('.info').fadeOut(100);
-	// });
-
-	$('a#load-more-popular').click(function(){
-		$("#popular ul").animate({'height': '100%'});
-		return false;
-	});
-
-        initializeCycle();
-
-	$("#add form a").click(function(){
-		$(this).parent().submit();
-	});
-
 });
