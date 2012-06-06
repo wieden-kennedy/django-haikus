@@ -353,8 +353,8 @@ class ComposeHaikuTests(TestCase):
 
         assert HaikuModel.objects.count() > 0
 
-        h = list(pick_random(HaikuModel, count=1))
-        assert h[0].pk is not None
+        h = pick_random(HaikuModel)
+        assert h.pk is not None
 
         assert HaikuModel.objects.filter(is_composite=True).count() == 0
 
@@ -393,3 +393,7 @@ class TestUtilityMethods(TestCase):
         assert twitter_shares_for_url(url) == 0
         assert facebook_shares_for_url(url) == 0
         assert get_shares_for_url(url) == 0
+
+        #Facebook will return false on this, now we can handle it
+        url = "http://localhost:8000"
+        assert facebook_shares_for_url(url) == 0

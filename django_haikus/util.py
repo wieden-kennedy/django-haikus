@@ -11,23 +11,28 @@ def twitter_shares_for_url(url):
     """
     Get the total number of twitter shares for the given URL
     """
+    score = 0
     response = requests.get(TWITTER_URL % url)
     response_dict = json.loads(response.text)
     try: 
-        return int(response_dict['count'])
+        score = int(response_dict['count'])
     except KeyError:
-        return 0
+        pass
+    return score
 
 def facebook_shares_for_url(url):
     """
     Get the total number of facebook shares/likes/comments for the given URL
     """
+    score = 0
     response = requests.get(FB_URL % url)
     response_dict = json.loads(response.text)
     try:
-        return int(response_dict['shares'])
+        if type(response_dict) == dict:
+            score = int(response_dict['shares'])
     except KeyError:
-        return 0
+        pass
+    return score
 
 
 def get_shares_for_url(url):
