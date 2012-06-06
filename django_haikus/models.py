@@ -269,12 +269,13 @@ class HaikuModel(models.Model, Haiku):
         This HaikuModel's heat based on the reddit ranking algorithm described here:
         http://amix.dk/blog/post/19588
         """
+        heat = self.heat
         if score is None:
             score = self.score()
         try:
             heat = log(float(score), 10) + self._epoch_seconds()/constant_seconds
         except ValueError:
-            heat 
+            pass
         if heat != self.heat:
             self.heat = heat
             self.save()
