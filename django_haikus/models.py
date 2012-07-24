@@ -10,7 +10,7 @@ from math import log
 
 from redis.exceptions import ResponseError
 
-from django.db import models, IntegrityError
+from django.db import models, IntegrityError, connection
 from django.db.models import Count
 from django.db.models.signals import post_save
 from django.conf import settings
@@ -95,6 +95,7 @@ class HaikuManager(models.Manager):
             haiku_model.set_quality()
             haiku_model.save()
         except IntegrityError:
+            connection.close()
             haiku_model.delete()
             haiku_model = None
         return haiku_model                                    
