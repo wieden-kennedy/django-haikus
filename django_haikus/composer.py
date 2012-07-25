@@ -1,5 +1,6 @@
 import random
 
+from django.db import connection
 from django.db.models import Max
 from django import forms
 from django.db import IntegrityError
@@ -32,6 +33,7 @@ def compose_haikus(pattern, source=None, count=1, quality_threshold=80, debug='0
             composed.save()
             h.append(composed)
         except IntegrityError:
+            connection.close()
             composed.delete()
     return h
 
