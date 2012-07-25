@@ -1,9 +1,7 @@
 import random
 
-from django.db import connection
-from django.db.models import Max
 from django import forms
-from django.db import IntegrityError
+from django.db import IntegrityError, connection
 from django.contrib.contenttypes.models import ContentType
 from django_haikus.models import HaikuModel
 
